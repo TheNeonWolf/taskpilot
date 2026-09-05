@@ -1,5 +1,20 @@
 import Navbar from "@/components/Navbar";
+import StatCard from "@/components/StatCard";
+import { projects, tasks } from "@/data/mockData";
+
 export default function Home() {
+
+  const totalProjects = projects.length;
+  const totalTasks = tasks.length;
+
+  const completedTasks = tasks.filter(
+    (task) => task.status === "DONE"
+  ).length;
+
+  const inProgressTasks = tasks.filter(
+    (task) => task.status === "IN_PROGRESS"
+  ).length;
+
   return (
     <>
       <Navbar />
@@ -12,6 +27,13 @@ export default function Home() {
         <p className="mt-2 text-gray-600">
           Here's what's happening with your projects.
         </p>
+
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard title="Total Projects" value={totalProjects} />
+          <StatCard title="Total Tasks" value={totalTasks} />
+          <StatCard title="Completed" value={completedTasks} />
+          <StatCard title="In Progress" value={inProgressTasks} />
+        </div>
       </main>
     </>
   );
