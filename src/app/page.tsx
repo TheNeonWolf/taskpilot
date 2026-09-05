@@ -42,8 +42,15 @@ export default function Home() {
         <section className="mt-10">
           <div className="mb-5 flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-900">
-              Your Projects
+              Active Projects
             </h2>
+
+            <Link
+              href="/projects"
+              className="text-sm font-medium text-blue-600 hover:text-blue-800"
+            >
+              View All →
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

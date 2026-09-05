@@ -1,4 +1,19 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
 export default function Navbar() {
+  const pathname = usePathname();
+
+  const isActive = (href: string) => {
+    if (href === "/") {
+      return pathname === "/";
+    }
+
+    return pathname.startsWith(href);
+  };
+
   return (
     <nav className="border-b border-gray-200 bg-white">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
@@ -7,17 +22,38 @@ export default function Navbar() {
         </h1>
 
         <div className="flex items-center gap-8">
-          <a href="#" className="text-sm font-medium text-gray-900">
+          <Link
+            href="/"
+            className={`text-sm ${
+              isActive("/")
+                ? "border-b-2 border-gray-900 pb-1 font-semibold text-gray-900"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
             Dashboard
-          </a>
+          </Link>
 
-          <a href="#" className="text-sm text-gray-600 hover:text-gray-900">
+          <Link
+            href="/projects"
+            className={`text-sm ${
+              isActive("/projects")
+                ? "border-b-2 border-gray-900 pb-1 font-semibold text-gray-900"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
             Projects
-          </a>
+          </Link>
 
-          <a href="#" className="text-sm text-gray-600 hover:text-gray-900">
+          <Link
+            href="/tasks"
+            className={`text-sm ${
+              isActive("/tasks")
+                ? "border-b-2 border-gray-900 pb-1 font-semibold text-gray-900"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
             Tasks
-          </a>
+          </Link>
         </div>
 
         <div className="flex items-center gap-3">
