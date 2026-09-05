@@ -2,6 +2,7 @@ import Navbar from "@/components/Navbar";
 import StatCard from "@/components/StatCard";
 import { projects, tasks } from "@/data/mockData";
 import ProjectCard from "@/components/ProjectCard";
+import Link from "next/link";
 
 export default function Home() {
 
@@ -15,6 +16,8 @@ export default function Home() {
   const inProgressTasks = tasks.filter(
     (task) => task.status === "IN_PROGRESS"
   ).length;
+
+  const dashboardProjects = projects.slice(0, 4);
 
   return (
     <>
@@ -41,14 +44,10 @@ export default function Home() {
             <h2 className="text-2xl font-bold text-gray-900">
               Your Projects
             </h2>
-
-            <button className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700">
-              + New Project
-            </button>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {projects.map((project) => (
+            {dashboardProjects.map((project) => (
               <ProjectCard key={project.id} project={project} />
             ))}
           </div>
