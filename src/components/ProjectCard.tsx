@@ -3,14 +3,26 @@ import ProgressBar from "@/components/ProgressBar";
 
 type ProjectCardProps = {
   project: Project;
+  showUpdateButton?: boolean;
 };
 
-export default function ProjectCard({ project }: ProjectCardProps) {
+export default function ProjectCard({ project, showUpdateButton = false }: ProjectCardProps) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <h3 className="text-lg font-semibold text-gray-900">
-        {project.name}
-      </h3>
+      <div className="flex items-start justify-between gap-4">
+        <h3 className="text-lg font-semibold text-gray-900">
+          {project.name}
+        </h3>
+
+        {showUpdateButton && (
+          <button
+            type="button"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+          >
+            Update
+          </button>
+        )}
+      </div>
 
       <p className="mt-2 text-sm text-gray-600">
         {project.description}
