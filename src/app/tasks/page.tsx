@@ -7,6 +7,8 @@ import TaskCard from "@/components/TaskCard";
 import { tasks } from "@/data/mockData";
 import { Task } from "@/types";
 import ConfirmModal from "@/components/ConfirmModal";
+import EmptyState from "@/components/EmptyState";
+import { ListTodo, SearchX } from "lucide-react";
 
 export default function TasksPage() {
   const [search, setSearch] = useState("");
@@ -119,14 +121,33 @@ export default function TasksPage() {
               ))}
             </div>
           ) : (
-            <div className="rounded-xl border border-gray-200 bg-white py-16 text-center">
-              <h2 className="text-lg font-semibold text-gray-900">
-                No tasks found
-              </h2>
-
-              <p className="mt-2 text-sm text-gray-500">
-                Try changing your search or filters.
-              </p>
+            <div className="mt-8">
+              {taskList.length === 0 ? (
+                <EmptyState
+                  icon={<ListTodo size={40} />}
+                  title="No tasks yet"
+                  message="Create your first task to start tracking your work."
+                />
+              ) : filteredTasks.length === 0 ? (
+                <EmptyState
+                  icon={<SearchX size={40} />}
+                  title="No tasks found"
+                  message="Try changing your search or filters."
+                />
+              ) : (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {filteredTasks.map((task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      searchQuery={search}
+                      onStatusChange={handleStatusChange}
+                      onPriorityChange={handlePriorityChange}
+                      onDelete={setTaskToDelete}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

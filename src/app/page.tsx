@@ -6,6 +6,8 @@ import TaskCard from "@/components/TaskCard";
 import Link from "next/link";
 import TaskStatusChart from "@/components/charts/TaskStatusChart";
 import ProjectCompletionChart from "@/components/charts/ProjectCompletionChart";
+import EmptyState from "@/components/EmptyState";
+import { FolderOpen, ListTodo } from "lucide-react";
 
 export default function Home() {
 
@@ -61,14 +63,22 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {dashboardProjects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-              />
-            ))}
-          </div>
+          {dashboardProjects.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {dashboardProjects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<FolderOpen size={40} />}
+              title="No active projects"
+              message="You currently don't have any active projects."
+            />
+          )}
         </section>
 
         <section className="mt-10">
@@ -85,11 +95,22 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {dashboardTasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
-            ))}
-          </div>
+          {dashboardTasks.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {dashboardTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<ListTodo size={40} />}
+              title="No tasks yet"
+              message="Your recent tasks will appear here once you create one."
+            />
+          )}
         </section>
 
         <section className="mt-10">

@@ -49,7 +49,7 @@ export default function ProjectCard({
         </h3>
 
         <span
-          className={`justify-left rounded-full px-3 py-1 text-xs font-medium ${
+          className={`justify-self-center rounded-full px-3 py-1 text-xs font-medium ${
             project.status === "COMPLETED"
               ? "bg-green-100 text-green-700"
               : "bg-blue-100 text-blue-700"

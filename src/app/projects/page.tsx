@@ -6,6 +6,8 @@ import ConfirmModal from "@/components/ConfirmModal";
 import Navbar from "@/components/Navbar";
 import ProjectCard from "@/components/ProjectCard";
 import { projects } from "@/data/mockData";
+import EmptyState from "@/components/EmptyState";
+import { FolderOpen, SearchX } from "lucide-react";
 
 export default function ProjectsPage() {
   const [search, setSearch] = useState("");
@@ -86,14 +88,32 @@ export default function ProjectsPage() {
               ))}
             </div>
           ) : (
-            <div className="rounded-xl border border-gray-200 bg-white py-16 text-center">
-              <h2 className="text-lg font-semibold text-gray-900">
-                No projects found
-              </h2>
-
-              <p className="mt-2 text-sm text-gray-500">
-                Try changing your search.
-              </p>
+            <div className="mt-8">
+              {projectList.length === 0 ? (
+                <EmptyState
+                  icon={<FolderOpen size={40} />}
+                  title="No projects yet"
+                  message="Create your first project to start organizing your work."
+                />
+              ) : filteredProjects.length === 0 ? (
+                <EmptyState
+                  icon={<SearchX size={40} />}
+                  title="No projects found"
+                  message="Try changing your search to find what you're looking for."
+                />
+              ) : (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {filteredProjects.map((project) => (
+                    <ProjectCard
+                      key={project.id}
+                      project={project}
+                      showUpdateButton
+                      searchQuery={search}
+                      onDelete={setProjectToDelete}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

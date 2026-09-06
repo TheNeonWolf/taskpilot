@@ -9,6 +9,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import EmptyState from "@/components/EmptyState";
+import { ChartNoAxesColumn } from "lucide-react";
 
 import { Task } from "@/types";
 
@@ -45,6 +47,28 @@ export default function TaskStatusChart({
       tasks: doneCount,
     },
   ];
+
+  if (tasks.length === 0) {
+    return (
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Tasks by Status
+          </h2>
+
+          <p className="mt-1 text-sm text-gray-500">
+            Overview of your current tasks.
+          </p>
+        </div>
+
+        <EmptyState
+          icon={<ChartNoAxesColumn size={40} />}
+          title="No task data"
+          message="Task statistics will appear here once you create some tasks."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
