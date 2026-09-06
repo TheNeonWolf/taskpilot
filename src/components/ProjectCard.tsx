@@ -1,7 +1,10 @@
-"use client"
+"use client";
 
-import { Project } from "@/types";
+import type { Project } from "@/types";
+
 import ProgressBar from "@/components/ProgressBar";
+
+import { Trash2 } from "lucide-react";
 
 type ProjectCardProps = {
   project: Project;
@@ -10,7 +13,7 @@ type ProjectCardProps = {
   onDelete?: (project: Project) => void;
 };
 
-function highliteMatch(text: string, query: string) {
+function highlightMatch(text: string, query: string) {
   if (!query.trim()) {
     return text;
   }
@@ -32,15 +35,30 @@ function highliteMatch(text: string, query: string) {
   );
 }
 
-export default function ProjectCard({ project, showUpdateButton = false, searchQuery = "", onDelete}: ProjectCardProps) {
+export default function ProjectCard({
+  project,
+  showUpdateButton = false,
+  searchQuery = "",
+  onDelete,
+}: ProjectCardProps) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <h3 className="text-lg font-semibold text-gray-900">
-          {highliteMatch(project.name, searchQuery)}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+        <h3 className="justify-self-start text-lg font-semibold text-gray-900">
+          {highlightMatch(project.name, searchQuery)}
         </h3>
 
-        <div className="flex items-center gap-2">
+        <span
+          className={`justify-left rounded-full px-3 py-1 text-xs font-medium ${
+            project.status === "COMPLETED"
+              ? "bg-green-100 text-green-700"
+              : "bg-blue-100 text-blue-700"
+          }`}
+        >
+          {project.status}
+        </span>
+
+        <div className="flex items-center gap-2 justify-self-end">
           {showUpdateButton && (
             <button
               type="button"
@@ -54,16 +72,18 @@ export default function ProjectCard({ project, showUpdateButton = false, searchQ
             <button
               type="button"
               onClick={() => onDelete(project)}
-              className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+              title="Delete project"
+              aria-label="Delete project"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 text-red-600 transition hover:bg-red-50"
             >
-              Delete
+              <Trash2 size={15} />
             </button>
           )}
         </div>
       </div>
 
-      <p className="mt-2 text-sm text-gray-600">
-        {highliteMatch(project.description, searchQuery)}
+      <p className="mt-3 text-sm text-gray-600">
+        {highlightMatch(project.description, searchQuery)}
       </p>
 
       <div className="mt-6">

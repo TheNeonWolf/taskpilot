@@ -6,24 +6,28 @@ export const projects: Project[] = [
     name: "Portfolio Website",
     description: "Build a personal developer portfolio",
     progress: 75,
+    status: "ACTIVE"
   },
   {
     id: 2,
     name: "E-Commerce Platform",
     description: "Create a full-stack online store",
-    progress: 45,
+    progress: 100,
+    status: "COMPLETED"
   },
   {
     id: 3,
     name: "Study Planner",
     description: "Plan and track university coursework",
     progress: 60,
+    status: "ACTIVE"
   },
   {
     id: 4,
     name: "Fitness Tracker",
     description: "Track workouts and fitness goals",
     progress: 30,
+    status: "ACTIVE"
   },
 ];
 

@@ -5,6 +5,7 @@ import ProjectCard from "@/components/ProjectCard";
 import TaskCard from "@/components/TaskCard";
 import Link from "next/link";
 import TaskStatusChart from "@/components/charts/TaskStatusChart";
+import ProjectCompletionChart from "@/components/charts/ProjectCompletionChart";
 
 export default function Home() {
 
@@ -19,8 +20,12 @@ export default function Home() {
     (task) => task.status === "IN_PROGRESS"
   ).length;
 
-  const dashboardProjects = projects.slice(0, 4);
-  const dashboardTasks = tasks.slice(0, 4);
+  const dashboardProjects = projects
+    .filter((project) => project.status === "ACTIVE")
+    .slice(0, 4);
+  const dashboardTasks = tasks
+    .filter((task) => task.status !== "DONE")
+    .slice(0, 4);
 
   return (
     <>
@@ -61,7 +66,6 @@ export default function Home() {
               <ProjectCard
                 key={project.id}
                 project={project}
-                showUpdateButton
               />
             ))}
           </div>
@@ -89,7 +93,10 @@ export default function Home() {
         </section>
 
         <section className="mt-10">
-          <TaskStatusChart tasks={tasks} />
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <ProjectCompletionChart projects={projects} />
+            <TaskStatusChart tasks={tasks} />
+          </div>
         </section>
       </main>
     </>
