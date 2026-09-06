@@ -42,7 +42,7 @@ export default function Home() {
           Here's what's happening with your projects.
         </p>
 
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <StatCard title="Total Projects" value={totalProjects} />
           <StatCard title="Total Tasks" value={totalTasks} />
           <StatCard title="Completed" value={completedTasks} />
