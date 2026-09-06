@@ -4,6 +4,7 @@ import { projects, tasks } from "@/data/mockData";
 import ProjectCard from "@/components/ProjectCard";
 import TaskCard from "@/components/TaskCard";
 import Link from "next/link";
+import TaskStatusChart from "@/components/charts/TaskStatusChart";
 
 export default function Home() {
 
@@ -85,6 +86,10 @@ export default function Home() {
               <TaskCard key={task.id} task={task} />
             ))}
           </div>
+        </section>
+
+        <section className="mt-10">
+          <TaskStatusChart tasks={tasks} />
         </section>
       </main>
     </>
