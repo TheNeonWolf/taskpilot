@@ -4,6 +4,7 @@ import { Task,
     TaskPriority,
     TaskStatus
  } from "@/types";
+ import { Trash2 } from "lucide-react";
 
 type TaskCardProps = {
   task: Task;
@@ -16,6 +17,7 @@ type TaskCardProps = {
     taskId: number,
     priority: TaskPriority
   ) => void;
+  onDelete?: (task: Task) => void;
 };
 
 function highlightMatch(text: string, query: string) {
@@ -40,7 +42,7 @@ function highlightMatch(text: string, query: string) {
   );
 }
 
-export default function TaskCard({ task, searchQuery = "", onStatusChange, onPriorityChange }: TaskCardProps) {
+export default function TaskCard({ task, searchQuery = "", onStatusChange, onPriorityChange, onDelete }: TaskCardProps) {
   
     const getNextStatus = (): TaskStatus => {
         if (task.status === "TODO") {
@@ -152,6 +154,18 @@ export default function TaskCard({ task, searchQuery = "", onStatusChange, onPri
                         >
                             {task.priority}
                         </span>
+                    )}
+
+                    {onDelete && (
+                        <button
+                            type="button"
+                            onClick={() => onDelete(task)}
+                            title="Delete task"
+                            aria-label="Delete task"
+                            className="flex h-8 w-8 items-center justify-center rounded-full border border-red-200 text-red-600 transition hover:bg-red-50 hover:text-red-700"
+                        >
+                            <Trash2 size={15} />
+                        </button>
                     )}
                 </div>
             </div>

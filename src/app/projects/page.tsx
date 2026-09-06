@@ -1,15 +1,18 @@
 "use client";
 
 import { useState } from "react";
-
+import { Project } from "@/types";
+import ConfirmModal from "@/components/ConfirmModal";
 import Navbar from "@/components/Navbar";
 import ProjectCard from "@/components/ProjectCard";
 import { projects } from "@/data/mockData";
 
 export default function ProjectsPage() {
   const [search, setSearch] = useState("");
+  const [projectList, setProjectList] = useState(projects);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 
-  const filteredProjects = projects.filter((project) => {
+  const filteredProjects = projectList.filter((project) => {
     const query = search.toLowerCase();
 
     return (
@@ -17,6 +20,20 @@ export default function ProjectsPage() {
       project.description.toLowerCase().includes(query)
     );
   });
+
+  const handleDeleteProject = () => {
+    if (!projectToDelete) {
+      return;
+    }
+
+    setProjectList((currentProjects) =>
+      currentProjects.filter(
+        (project) => project.id !== projectToDelete.id
+      )
+    );
+
+    setProjectToDelete(null);
+  };
 
   return (
     <>
@@ -63,6 +80,8 @@ export default function ProjectsPage() {
                   key={project.id}
                   project={project}
                   showUpdateButton
+                  searchQuery={search}
+                  onDelete={setProjectToDelete}
                 />
               ))}
             </div>
@@ -79,6 +98,16 @@ export default function ProjectsPage() {
           )}
         </div>
       </main>
+
+      <ConfirmModal
+        isOpen={projectToDelete !== null}
+        title="Delete project?"
+        message={`Are you sure you want to delete "${
+          projectToDelete?.name ?? ""
+        }"? This action cannot be undone.`}
+        onCancel={() => setProjectToDelete(null)}
+        onConfirm={handleDeleteProject}
+      />
     </>
   );
 }

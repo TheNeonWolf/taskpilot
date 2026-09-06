@@ -5,12 +5,15 @@ import Navbar from "@/components/Navbar";
 import SearchFilter from "@/components/SearchFilter";
 import TaskCard from "@/components/TaskCard";
 import { tasks } from "@/data/mockData";
+import { Task } from "@/types";
+import ConfirmModal from "@/components/ConfirmModal";
 
 export default function TasksPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
   const [priority, setPriority] = useState("ALL");
   const [taskList, setTaskList] = useState(tasks);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   const filteredTasks = taskList.filter((task) => {
     const matchesSearch = task.title
@@ -51,6 +54,20 @@ export default function TasksPage() {
       )
     );
   };
+
+  const handleDeleteTask = () => {
+    if(!taskToDelete) {
+      return;
+    }
+
+    setTaskList((currentTasks) =>
+      currentTasks.filter(
+        (tasks) => tasks.id !== taskToDelete.id
+      )
+    );
+    
+    setTaskToDelete(null);
+  }
 
   return (
     <>
@@ -97,6 +114,7 @@ export default function TasksPage() {
                   searchQuery={search}
                   onStatusChange={handleStatusChange}
                   onPriorityChange={handlePriorityChange}
+                  onDelete={setTaskToDelete}
                 />
               ))}
             </div>
@@ -113,6 +131,16 @@ export default function TasksPage() {
           )}
         </div>
       </main>
+
+      <ConfirmModal
+        isOpen={taskToDelete !== null}
+        title="Delete task?"
+        message={`Are you sure you want to delete "${
+          taskToDelete?.title ?? ""
+        }"? This action cannot be undone.`}
+        onCancel={() => setTaskToDelete(null)}
+        onConfirm={handleDeleteTask}
+      />
     </>
   );
 }
