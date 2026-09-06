@@ -6,7 +6,9 @@ import {
   Pie,
   PieChart,
   ResponsiveContainer,
+  Sector,
   Tooltip,
+  type PieSectorShapeProps,
 } from "recharts";
 import EmptyState from "@/components/EmptyState";
 import { ChartPie } from "lucide-react";
@@ -15,6 +17,23 @@ import type { Project } from "@/types";
 type ProjectCompletionChartProps = {
   projects: Project[];
 };
+
+function ProjectSector(props: PieSectorShapeProps) {
+  const outerRadius = 
+    Number(props.outerRadius ?? 0) +
+    (props.isActive ? 8 : 0);
+
+  return (
+    <Sector
+      {...props}
+      outerRadius={outerRadius}
+      fill={props.fill}
+      style={{
+        transition: "all 0.2s ease",
+      }}
+    />
+  );
+}
 
 export default function ProjectCompletionChart({
   projects,
@@ -31,10 +50,12 @@ export default function ProjectCompletionChart({
     {
       name: "Completed",
       value: completedProjects,
+      fill: "#16a34a"
     },
     {
       name: "Active",
       value: activeProjects,
+      fill: "#2563eb"
     },
   ];
 
@@ -84,13 +105,10 @@ export default function ProjectCompletionChart({
               innerRadius={70}
               outerRadius={105}
               paddingAngle={3}
-            >
-              <Cell fill="#16a34a" />
-              <Cell fill="#2563eb" />
-            </Pie>
+              shape={ProjectSector}
+            />
 
             <Tooltip />
-
             <Legend />
           </PieChart>
         </ResponsiveContainer>

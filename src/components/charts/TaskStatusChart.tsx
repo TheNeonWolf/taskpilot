@@ -99,12 +99,17 @@ export default function TaskStatusChart({
               axisLine={false}
             />
 
-            <Tooltip />
+            <Tooltip cursor={false} />
 
             <Bar
               dataKey="tasks"
               fill="#2563eb"
               radius={[6, 6, 0, 0]}
+              activeBar={{
+                fill: "#1d4ed8",
+                stroke: "#1e40af",
+                strokeWidth: 2,
+              }}
             />
           </BarChart>
         </ResponsiveContainer>
