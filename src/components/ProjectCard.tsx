@@ -42,7 +42,7 @@ export default function ProjectCard({
   onDelete,
 }: ProjectCardProps) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
         <h3 className="justify-self-start text-lg font-semibold text-gray-900">
           {highlightMatch(project.name, searchQuery)}

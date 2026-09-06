@@ -70,7 +70,7 @@ export default function TaskCard({ task, searchQuery = "", onStatusChange, onPri
 
     return (
         <div
-            className={`rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition ${
+            className={`rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md ${
                 task.status === "DONE"
                 ? "opacity-50"
                 : "opacity-100"

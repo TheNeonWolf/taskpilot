@@ -71,7 +71,7 @@ export default function TaskStatusChart({
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
       <div className="mb-6">
         <h2 className="text-lg font-semibold text-gray-900">
           Tasks by Status
