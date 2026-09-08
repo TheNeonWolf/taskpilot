@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -17,67 +18,54 @@ export default function Navbar() {
     return pathname.startsWith(href);
   };
 
+  const linkClass = (href: string) =>
+    `text-sm transition ${
+      isActive(href)
+        ? "border-b-2 border-gray-900 pb-1 font-semibold text-gray-900 dark:border-white dark:text-white"
+        : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+    }`;
+
   return (
-    <nav className="border-b border-gray-200 bg-white">
+    <nav className="border-b border-gray-200 bg-white transition-colors dark:border-gray-800 dark:bg-gray-900">
       <div className="mx-auto max-w-7xl px-6">
         <div className="flex items-center justify-between py-4">
-          {/* Logo */}
-          <h1 className="text-xl font-bold">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">
             TaskPilot
           </h1>
 
           {/* Desktop navigation */}
           <div className="hidden items-center gap-8 md:flex">
-            <Link
-              href="/"
-              className={`text-sm ${
-                isActive("/")
-                  ? "border-b-2 border-gray-900 pb-1 font-semibold text-gray-900"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
+            <Link href="/" className={linkClass("/")}>
               Dashboard
             </Link>
 
-            <Link
-              href="/projects"
-              className={`text-sm ${
-                isActive("/projects")
-                  ? "border-b-2 border-gray-900 pb-1 font-semibold text-gray-900"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
+            <Link href="/projects" className={linkClass("/projects")}>
               Projects
             </Link>
 
-            <Link
-              href="/tasks"
-              className={`text-sm ${
-                isActive("/tasks")
-                  ? "border-b-2 border-gray-900 pb-1 font-semibold text-gray-900"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
+            <Link href="/tasks" className={linkClass("/tasks")}>
               Tasks
             </Link>
           </div>
 
           {/* Desktop profile */}
           <div className="hidden items-center gap-3 md:flex">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200">
+            <ThemeToggle />
+
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100">
               T
             </div>
 
-            <span className="text-sm font-medium">
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
               Test
             </span>
           </div>
 
-          {/* Mobile menu button */}
+          {/* Mobile hamburger */}
           <button
             type="button"
             onClick={() => setIsMenuOpen((open) => !open)}
-            className="flex h-10 w-10 items-center justify-center rounded-lg transition hover:bg-gray-100 md:hidden"
+            className="cursor-pointer flex h-10 w-10 items-center justify-center rounded-lg text-gray-700 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 md:hidden"
             aria-label="Toggle navigation menu"
             aria-expanded={isMenuOpen}
           >
@@ -87,54 +75,40 @@ export default function Navbar() {
 
         {/* Mobile menu */}
         {isMenuOpen && (
-          <div className="border-t border-gray-200 py-4 md:hidden">
+          <div className="border-t border-gray-200 py-4 dark:border-gray-800 md:hidden">
             <div className="flex flex-col gap-1">
-              <Link
-                href="/"
-                onClick={() => setIsMenuOpen(false)}
-                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                  isActive("/")
-                    ? "bg-gray-100 text-gray-900"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                Dashboard
-              </Link>
-
-              <Link
-                href="/projects"
-                onClick={() => setIsMenuOpen(false)}
-                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                  isActive("/projects")
-                    ? "bg-gray-100 text-gray-900"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                Projects
-              </Link>
-
-              <Link
-                href="/tasks"
-                onClick={() => setIsMenuOpen(false)}
-                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                  isActive("/tasks")
-                    ? "bg-gray-100 text-gray-900"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                Tasks
-              </Link>
+              {[
+                { href: "/", label: "Dashboard" },
+                { href: "/projects", label: "Projects" },
+                { href: "/tasks", label: "Tasks" },
+              ].map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                    isActive(link.href)
+                      ? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
             </div>
 
-            {/* Mobile profile */}
-            <div className="mt-3 flex items-center gap-3 border-t border-gray-200 px-3 pt-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200">
-                T
+            <div className="mt-3 flex items-center justify-between border-t border-gray-200 px-3 pt-4 dark:border-gray-800">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100">
+                  T
+                </div>
+
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Test
+                </span>
               </div>
 
-              <span className="text-sm font-medium">
-                Test
-              </span>
+              <ThemeToggle />
             </div>
           </div>
         )}

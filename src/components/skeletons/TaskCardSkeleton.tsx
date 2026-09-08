@@ -2,7 +2,7 @@ import Skeleton from "@/components/skeletons/Skeleton";
 
 export default function TaskCardSkeleton() {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <Skeleton className="h-5 w-48" />

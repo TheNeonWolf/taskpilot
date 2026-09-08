@@ -34,11 +34,11 @@ export default function Home() {
       <Navbar />
 
       <main className="mx-auto max-w-7xl px-6 py-8">
-        <h2 className="text-3xl font-bold text-gray-900">
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
           Welcome 👋
         </h2>
 
-        <p className="mt-2 text-gray-600">
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
           Here's what's happening with your projects.
         </p>
 
@@ -51,7 +51,7 @@ export default function Home() {
 
         <section className="mt-10">
           <div className="mb-5 flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
               Active Projects
             </h2>
 
@@ -83,7 +83,7 @@ export default function Home() {
 
         <section className="mt-10">
           <div className="mb-5 flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
               Recent Tasks
             </h2>
 

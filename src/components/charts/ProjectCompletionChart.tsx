@@ -61,13 +61,13 @@ export default function ProjectCompletionChart({
 
   if (projects.length === 0) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-gray-200 dark:botder-grey-800 bg-white dark:bg-grey-900 p-6 shadow-sm">
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             Project Completion
           </h2>
 
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Overview of your project progress.
           </p>
         </div>
@@ -82,13 +82,13 @@ export default function ProjectCompletionChart({
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
+    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
           Project Completion
         </h2>
 
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Overview of your project progress.
         </p>
       </div>
@@ -108,17 +108,38 @@ export default function ProjectCompletionChart({
               shape={ProjectSector}
             />
 
-            <Tooltip />
-            <Legend />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "var(--chart-tooltip-bg)",
+                border: "1px solid var(--chart-tooltip-border)",
+                borderRadius: "8px",
+                boxShadow: "0 8px 20px rgba(0, 0, 0, 0.15)",
+              }}
+              itemStyle={{
+                color: "var(--chart-tooltip-title)",
+              }}
+              formatter={(value, name) => [
+                `${value} ${Number(value) === 1 ? "project" : "projects"}`,
+                name,
+              ]}
+            />
+            
+            <Legend
+              formatter={(value) => (
+                <span style={{ color: "var(--chart-text)" }}>
+                  {value}
+                </span>
+              )}
+            />
           </PieChart>
         </ResponsiveContainer>
 
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pb-8">
-          <span className="text-3xl font-bold text-gray-900">
+          <span className="text-3xl font-bold text-gray-900 dark:text-white">
             {completedProjects}/{projects.length}
           </span>
 
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-gray-500 dark:text-gray-400">
             Completed
           </span>
         </div>

@@ -16,19 +16,19 @@ export default function SearchFilter({
   onPriorityChange,
 }: SearchFilterProps) {
   return (
-    <div className="flex flex-col gap-3 md:flex-row">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-[minmax(0,1fr)_10rem_10rem]">
       <input
         type="text"
-        placeholder="Search tasks..."
         value={search}
-        onChange={(event) => onSearchChange(event.target.value)}
-        className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:border-gray-500 md:flex-1"
+        onChange={(e) => onSearchChange(e.target.value)}
+        placeholder="Search tasks..."
+        className="col-span-2 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none transition focus:border-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 md:col-span-1"
       />
 
       <select
         value={status}
-        onChange={(event) => onStatusChange(event.target.value)}
-        className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm outline-none focus:border-gray-500"
+        onChange={(e) => onStatusChange(e.target.value)}
+        className="w-full min-w-0 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 outline-none transition focus:border-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
       >
         <option value="ALL">All Statuses</option>
         <option value="TODO">Todo</option>
@@ -38,8 +38,8 @@ export default function SearchFilter({
 
       <select
         value={priority}
-        onChange={(event) => onPriorityChange(event.target.value)}
-        className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm outline-none focus:border-gray-500"
+        onChange={(e) => onPriorityChange(e.target.value)}
+        className="w-full min-w-0 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 outline-none transition focus:border-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
       >
         <option value="ALL">All Priorities</option>
         <option value="LOW">Low</option>

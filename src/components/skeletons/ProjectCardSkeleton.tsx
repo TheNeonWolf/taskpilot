@@ -2,7 +2,7 @@ import Skeleton from "@/components/skeletons/Skeleton";
 
 export default function ProjectCardSkeleton() {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
         <Skeleton className="h-5 w-36 justify-self-start" />
         <Skeleton className="h-6 w-20 rounded-full justify-self-center" />
