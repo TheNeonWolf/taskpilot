@@ -84,7 +84,7 @@ export default function TaskStatusChart({
 
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data}>
+          <BarChart data={data} accessibilityLayer={false}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
             <XAxis
@@ -124,7 +124,7 @@ export default function TaskStatusChart({
               radius={[6, 6, 0, 0]}
               activeBar={{
                 fill: "#1d4ed8",
-                stroke: "#1e40af",
+                stroke: "none",
                 strokeWidth: 2,
               }}
             />

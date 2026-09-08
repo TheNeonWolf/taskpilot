@@ -29,6 +29,7 @@ function ProjectSector(props: PieSectorShapeProps) {
       outerRadius={outerRadius}
       fill={props.fill}
       style={{
+        outline: "none",
         transition: "all 0.2s ease",
       }}
     />
@@ -95,7 +96,7 @@ export default function ProjectCompletionChart({
 
       <div className="relative h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
+          <PieChart accessibilityLayer={false}>
             <Pie
               data={data}
               dataKey="value"
