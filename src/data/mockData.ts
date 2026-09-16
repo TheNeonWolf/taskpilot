@@ -88,4 +88,12 @@ export const tasks: Task[] = [
     priority: "MEDIUM",
     dueDate: "2026-09-16",
   },
+  {
+    id: 9,
+    projectId: 1,
+    title: "Build backend",
+    status: "TODO",
+    priority: "HIGH",
+    dueDate: "2026-09-25",
+  }
 ];

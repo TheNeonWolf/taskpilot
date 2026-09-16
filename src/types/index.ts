@@ -12,6 +12,7 @@ export type Project = {
 
 export type Task = {
     id: number;
+    projectId?: number;
     title: string;
     status: TaskStatus;
     priority: TaskPriority;
