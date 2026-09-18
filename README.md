@@ -1,36 +1,126 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TaskPilot
 
-## Getting Started
+TaskPilot is a responsive project and task management dashboard built as part of the **Innovation Hacks Full Stack Development Internship**.
 
-First, run the development server:
+This repository currently contains the **Task 1 frontend implementation**, focusing on responsive UI design, reusable React components, task/project visualization, filtering, loading states, error handling, and dark mode.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Dashboard
+- Project and task overview
+- Dynamic statistics:
+  - Total Projects
+  - Total Tasks
+  - Completed Tasks
+  - Tasks In Progress
+- Active Projects section
+- Recent Tasks section
+- Project completion doughnut chart
+- Task status bar chart
+- Interactive chart hover effects
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Project Management UI
+- View all projects
+- Project status indicators
+- Progress bars
+- Project search
+- Search result highlighting
+- Update button UI
+- Delete project confirmation modal
+- Empty states
 
-## Learn More
+### Task Management UI
+- View all tasks
+- Search tasks
+- Filter by task status
+- Filter by priority
+- Search result highlighting
+- Interactive task status controls
+- Interactive priority controls
+- Completed task styling
+- Delete task confirmation modal
+- Empty states
 
-To learn more about Next.js, take a look at the following resources:
+### Responsive Design
+TaskPilot is responsive across:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Desktop
+- Tablet
+- Mobile
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+On smaller devices, the navigation automatically changes to a hamburger menu and dashboard layouts adapt to the available screen size.
 
-## Deploy on Vercel
+### Dark Mode
+- Light and dark themes
+- Theme preference persistence
+- Responsive theme toggle
+- Dark-mode support across cards, charts, filters, modals, loading states, empty states, and error states
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### UI States
+TaskPilot includes reusable:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Loading skeletons
+- Empty states
+- Error states
+- Confirmation modals
+
+---
+
+## Tech Stack
+
+- **Next.js**
+- **React**
+- **TypeScript**
+- **Tailwind CSS**
+- **Recharts**
+- **Lucide React**
+- **next-themes**
+
+---
+
+## Project Structure
+
+```text
+src/
+├── app/
+│   ├── page.tsx
+│   ├── loading.tsx
+│   ├── error.tsx
+│   ├── projects/
+│   │   ├── page.tsx
+│   │   ├── loading.tsx
+│   │   └── error.tsx
+│   └── tasks/
+│       ├── page.tsx
+│       ├── loading.tsx
+│       └── error.tsx
+│
+├── components/
+│   ├── Navbar.tsx
+│   ├── ThemeToggle.tsx
+│   ├── ThemeProvider.tsx
+│   ├── StatCard.tsx
+│   ├── ProjectCard.tsx
+│   ├── TaskCard.tsx
+│   ├── ProgressBar.tsx
+│   ├── SearchFilter.tsx
+│   ├── ConfirmModal.tsx
+│   ├── EmptyState.tsx
+│   ├── ErrorState.tsx
+│   ├── charts/
+│   │   ├── TaskStatusChart.tsx
+│   │   └── ProjectCompletionChart.tsx
+│   └── skeletons/
+│       ├── Skeleton.tsx
+│       ├── StatCardSkeleton.tsx
+│       ├── ProjectCardSkeleton.tsx
+│       ├── TaskCardSkeleton.tsx
+│       └── ChartSkeleton.tsx
+│
+├── data/
+│   └── mockData.ts
+│
+└── types/
+    └── index.ts
