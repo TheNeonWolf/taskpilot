@@ -1,5 +1,21 @@
 import { z } from "zod";
 
+const dueDateSchema = z
+  .string()
+  .min(1, "Due date is required")
+  .regex(
+    /^\d{4}-\d{2}-\d{2}$/,
+    "Due date must be in YYYY-MM-DD format"
+  )
+  .refine(
+    (date) => !Number.isNaN(new Date(date).getTime()),
+    "Due date must be a valid date"
+  );
+
+const estimatedHoursSchema = z
+  .number()
+  .positive("Estimated hours must be greater than 0");
+
 const projectBaseSchema = z.object({
   name: z
     .string()
@@ -19,9 +35,9 @@ const initialProjectTaskSchema = z.object({
 
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
 
-  dueDate: z
-    .string()
-    .min(1, "Due date is required"),
+  dueDate: dueDateSchema,
+
+  estimatedHours: estimatedHoursSchema.optional(),
 });
 
 export const projectCreateSchema = projectBaseSchema.extend({
@@ -46,9 +62,9 @@ export const taskCreateSchema = z.object({
 
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
 
-  dueDate: z
-    .string()
-    .min(1, "Due date is required"),
+  dueDate: dueDateSchema,
+
+  estimatedHours: estimatedHoursSchema.optional(),
 });
 
 export const taskUpdateSchema = z.object({
@@ -65,9 +81,10 @@ export const taskUpdateSchema = z.object({
     .enum(["LOW", "MEDIUM", "HIGH"])
     .optional(),
 
-  dueDate: z
-    .string()
-    .min(1, "Due date is required")
+  dueDate: dueDateSchema.optional(),
+
+  estimatedHours: estimatedHoursSchema
+    .nullable()
     .optional(),
 
   projectId: z

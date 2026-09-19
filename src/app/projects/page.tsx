@@ -1,18 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Project } from "@/types";
 import ConfirmModal from "@/components/ConfirmModal";
 import Navbar from "@/components/Navbar";
 import ProjectCard from "@/components/ProjectCard";
-import { projects } from "@/data/mockData";
 import EmptyState from "@/components/EmptyState";
 import { FolderOpen, SearchX } from "lucide-react";
 
 export default function ProjectsPage() {
   const [search, setSearch] = useState("");
-  const [projectList, setProjectList] = useState(projects);
+  const [projectList, setProjectList] = useState<Project[]>([]);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const response = await fetch("/api/projects");
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || "Failed to fetch projects");
+        }
+
+        setProjectList(result.data);
+      } catch (error) {
+        console.error("Failed to fetch projects:", error);
+        setError("Failed to load projects");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, []);
 
   const filteredProjects = projectList.filter((project) => {
     const query = search.toLowerCase();
@@ -23,19 +47,65 @@ export default function ProjectsPage() {
     );
   });
 
-  const handleDeleteProject = () => {
+  const handleDeleteProject = async () => {
     if (!projectToDelete) {
       return;
     }
 
-    setProjectList((currentProjects) =>
-      currentProjects.filter(
-        (project) => project.id !== projectToDelete.id
-      )
-    );
+    try {
+      const response = await fetch(
+        `/api/projects/${projectToDelete.id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
-    setProjectToDelete(null);
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to delete project");
+      }
+
+      setProjectList((currentProjects) =>
+        currentProjects.filter(
+          (project) => project.id !== projectToDelete.id
+        )
+      );
+
+      setProjectToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete project:", error);
+      setError("Failed to delete project");
+    }
   };
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+
+        <main className="mx-auto max-w-7xl px-6 py-8">
+          <p className="text-gray-600 dark:text-gray-400">
+            Loading projects...
+          </p>
+        </main>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <Navbar />
+
+        <main className="mx-auto max-w-7xl px-6 py-8">
+          <p className="text-red-600">
+            {error}
+          </p>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -87,34 +157,18 @@ export default function ProjectsPage() {
                 />
               ))}
             </div>
+          ) : projectList.length === 0 ? (
+            <EmptyState
+              icon={<FolderOpen size={40} />}
+              title="No projects yet"
+              message="Create your first project to start organizing your work."
+            />
           ) : (
-            <div className="mt-8">
-              {projectList.length === 0 ? (
-                <EmptyState
-                  icon={<FolderOpen size={40} />}
-                  title="No projects yet"
-                  message="Create your first project to start organizing your work."
-                />
-              ) : filteredProjects.length === 0 ? (
-                <EmptyState
-                  icon={<SearchX size={40} />}
-                  title="No projects found"
-                  message="Try changing your search to find what you're looking for."
-                />
-              ) : (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {filteredProjects.map((project) => (
-                    <ProjectCard
-                      key={project.id}
-                      project={project}
-                      showUpdateButton
-                      searchQuery={search}
-                      onDelete={setProjectToDelete}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+            <EmptyState
+              icon={<SearchX size={40} />}
+              title="No projects found"
+              message="Try changing your search to find what you're looking for."
+            />
           )}
         </div>
       </main>

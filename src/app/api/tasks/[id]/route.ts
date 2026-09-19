@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { projects, tasks } from "@/data/mockData";
 import { taskUpdateSchema } from "@/lib/validations";
-import { updateProjectProgress } from "@/lib/projectProgress";
+import { prisma } from "@/lib/prisma";
+
+const DEV_USER_ID = 1;
 
 export async function GET(
   request: Request,
@@ -14,7 +15,7 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-        error: "Invalid project ID",
+        error: "Invalid task ID",
       },
       {
         status: 400,
@@ -22,26 +23,43 @@ export async function GET(
     );
   }
 
-  const task = tasks.find(
-    (task) => task.id === taskId
-  );
+  try {
+    const task = await prisma.task.findFirst({
+      where: {
+        id: taskId,
+        userId: DEV_USER_ID,
+      },
+    });
 
-  if (!task) {
+    if (!task) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Task not found",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: task,
+    });
+  } catch (error) {
+    console.error("Failed to fetch task:", error);
+
     return NextResponse.json(
       {
         success: false,
-        error: "Task not found",
+        error: "Failed to fetch task",
       },
       {
-        status: 404,
+        status: 500,
       }
     );
   }
-
-  return NextResponse.json({
-    success: true,
-    data: task,
-  });
 }
 
 export async function PATCH(
@@ -55,120 +73,125 @@ export async function PATCH(
     return NextResponse.json(
       {
         success: false,
-        error: "Invalid project ID",
+        error: "Invalid task ID",
       },
       {
         status: 400,
       }
     );
   }
-
-  const task = tasks.find(
-    (task) => task.id === taskId
-  );
-
-  if (!task) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Task not found",
-      },
-      {
-        status: 404,
-      }
-    );
-  }
-
-  let body;
 
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Invalid JSON body"
+    const existingTask = await prisma.task.findFirst({
+      where: {
+        id: taskId,
+        userId: DEV_USER_ID,
       },
-      {
-        status: 400
-      }
-    );
-  }
+    });
 
-  const result = taskUpdateSchema.safeParse(body);
-
-  if (!result.success) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: result.error.issues,
-      },
-      {
-        status: 400,
-      }
-    );
-  }
-
-  if (
-    result.data.projectId !== undefined &&
-    result.data.projectId !== null
-  ) {
-    const projectExists = projects.some(
-      (project) => project.id === result.data.projectId
-    );
-
-    if (!projectExists) {
+    if (!existingTask) {
       return NextResponse.json(
         {
           success: false,
-          error: "Project not found",
+          error: "Task not found",
         },
         {
           status: 404,
         }
       );
     }
+
+    let body;
+
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid JSON body",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const result = taskUpdateSchema.safeParse(body);
+
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error.issues,
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      result.data.projectId !== undefined &&
+      result.data.projectId !== null
+    ) {
+      const project = await prisma.project.findFirst({
+        where: {
+          id: result.data.projectId,
+          userId: DEV_USER_ID,
+        },
+      });
+
+      if (!project) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Project not found",
+          },
+          {
+            status: 404,
+          }
+        );
+      }
+    }
+
+    const updatedTask = await prisma.task.update({
+      where: {
+        id: taskId,
+      },
+      data: {
+        title: result.data.title,
+        status: result.data.status,
+        priority: result.data.priority,
+
+        dueDate:
+          result.data.dueDate !== undefined
+            ? new Date(result.data.dueDate)
+            : undefined,
+        
+        estimatedHours: result.data.estimatedHours,
+
+        projectId: result.data.projectId,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: updatedTask,
+    });
+  } catch (error) {
+    console.error("Failed to update task:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to update task",
+      },
+      {
+        status: 500,
+      }
+    );
   }
-
-  const previousProjectId = task.projectId;
-
-  if (result.data.title !== undefined) {
-    task.title = result.data.title;
-  }
-
-  if (result.data.status !== undefined) {
-    task.status = result.data.status;
-  }
-
-  if (result.data.priority !== undefined) {
-    task.priority = result.data.priority;
-  }
-
-  if (result.data.dueDate !== undefined) {
-    task.dueDate = result.data.dueDate;
-  }
-
-  if (result.data.projectId === null) {
-    delete task.projectId;
-  } else if (result.data.projectId !== undefined) {
-    task.projectId = result.data.projectId;
-  }
-
-  if (previousProjectId !== undefined) {
-    updateProjectProgress(previousProjectId);
-  }
-
-  if (
-    task.projectId !== undefined &&
-    task.projectId !== previousProjectId
-  ) {
-    updateProjectProgress(task.projectId);
-  }
-
-  return NextResponse.json({
-    success: true,
-    data: task,
-  });
 }
 
 export async function DELETE(
@@ -182,7 +205,7 @@ export async function DELETE(
     return NextResponse.json(
       {
         success: false,
-        error: "Invalid project ID",
+        error: "Invalid task ID",
       },
       {
         status: 400,
@@ -190,30 +213,47 @@ export async function DELETE(
     );
   }
 
-  const taskIndex = tasks.findIndex(
-    (task) => task.id === taskId
-  );
+  try {
+    const existingTask = await prisma.task.findFirst({
+      where: {
+        id: taskId,
+        userId: DEV_USER_ID,
+      },
+    });
 
-  if (taskIndex === -1) {
+    if (!existingTask) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Task not found",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    const deletedTask = await prisma.task.delete({
+      where: {
+        id: taskId,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: deletedTask,
+    });
+  } catch (error) {
+    console.error("Failed to delete task:", error);
+
     return NextResponse.json(
       {
         success: false,
-        error: "Task not found",
+        error: "Failed to delete task",
       },
       {
-        status: 404,
+        status: 500,
       }
     );
   }
-
-  const deletedTask = tasks.splice(taskIndex, 1)[0];
-
-  if (deletedTask.projectId !== undefined) {
-    updateProjectProgress(deletedTask.projectId);
-  }
-
-  return NextResponse.json({
-    success: true,
-    data: deletedTask,
-  });
 }

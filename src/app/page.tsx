@@ -1,6 +1,8 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import StatCard from "@/components/StatCard";
-import { projects, tasks } from "@/data/mockData";
 import ProjectCard from "@/components/ProjectCard";
 import TaskCard from "@/components/TaskCard";
 import Link from "next/link";
@@ -8,8 +10,60 @@ import TaskStatusChart from "@/components/charts/TaskStatusChart";
 import ProjectCompletionChart from "@/components/charts/ProjectCompletionChart";
 import EmptyState from "@/components/EmptyState";
 import { FolderOpen, ListTodo } from "lucide-react";
+import { Project, Task } from "@/types";
 
 export default function Home() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const [projectsResponse, tasksResponse] = await Promise.all([
+          fetch("/api/projects"),
+          fetch("/api/tasks"),
+        ]);
+
+        const projectsResult = await projectsResponse.json();
+        const tasksResult = await tasksResponse.json();
+
+        if (
+          !projectsResponse.ok ||
+          !projectsResult.success
+        ) {
+          throw new Error(
+            projectsResult.error || "Failed to fetch projects"
+          );
+        }
+
+        if (
+          !tasksResponse.ok ||
+          !tasksResult.success
+        ) {
+          throw new Error(
+            tasksResult.error || "Failed to fetch tasks"
+          );
+        }
+
+        setProjects(projectsResult.data);
+        setTasks(tasksResult.data);
+      } catch (error) {
+        console.error(
+          "Failed to fetch dashboard data:",
+          error
+        );
+
+        setError("Failed to load dashboard data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
 
   const totalProjects = projects.length;
   const totalTasks = tasks.length;
@@ -25,9 +79,38 @@ export default function Home() {
   const dashboardProjects = projects
     .filter((project) => project.status === "ACTIVE")
     .slice(0, 4);
+
   const dashboardTasks = tasks
     .filter((task) => task.status !== "DONE")
     .slice(0, 4);
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+
+        <main className="mx-auto max-w-7xl px-6 py-8">
+          <p className="text-gray-600 dark:text-gray-400">
+            Loading dashboard...
+          </p>
+        </main>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <Navbar />
+
+        <main className="mx-auto max-w-7xl px-6 py-8">
+          <p className="text-red-600">
+            {error}
+          </p>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -43,10 +126,25 @@ export default function Home() {
         </p>
 
         <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          <StatCard title="Total Projects" value={totalProjects} />
-          <StatCard title="Total Tasks" value={totalTasks} />
-          <StatCard title="Completed" value={completedTasks} />
-          <StatCard title="In Progress" value={inProgressTasks} />
+          <StatCard
+            title="Total Projects"
+            value={totalProjects}
+          />
+
+          <StatCard
+            title="Total Tasks"
+            value={totalTasks}
+          />
+
+          <StatCard
+            title="Completed"
+            value={completedTasks}
+          />
+
+          <StatCard
+            title="In Progress"
+            value={inProgressTasks}
+          />
         </div>
 
         <section className="mt-10">
@@ -115,8 +213,13 @@ export default function Home() {
 
         <section className="mt-10">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <ProjectCompletionChart projects={projects} />
-            <TaskStatusChart tasks={tasks} />
+            <ProjectCompletionChart
+              projects={projects}
+            />
+
+            <TaskStatusChart
+              tasks={tasks}
+            />
           </div>
         </section>
       </main>

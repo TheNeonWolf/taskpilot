@@ -1,13 +1,37 @@
 import { NextResponse } from "next/server";
-import { projects, tasks } from "@/data/mockData";
 import { taskCreateSchema } from "@/lib/validations";
-import { updateProjectProgress } from "@/lib/projectProgress";
+import { prisma } from "@/lib/prisma";
+
+const DEV_USER_ID = 1;
 
 export async function GET() {
-  return NextResponse.json({
-    success: true,
-    data: tasks,
-  });
+  try {
+    const tasks = await prisma.task.findMany({
+      where: {
+        userId: DEV_USER_ID
+      },
+      orderBy: {
+        id: "asc"
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: tasks
+    });
+  } catch (error) {
+    console.error("Failed to fetch tasks:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to fetch tasks"
+      },
+      {
+        status: 500
+      }
+    );
+  }
 }
 
 export async function POST(request: Request) {
@@ -41,43 +65,62 @@ export async function POST(request: Request) {
     );
   }
 
-  if (result.data.projectId !== undefined) {
-    const projectExists = projects.some(
-      (project) => project.id === result.data.projectId
-    );
-
-    if (!projectExists) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Project not found",
-        },
-        {
-          status: 404,
+  try {
+    if (result.data.projectId !== undefined) {
+      const project = await prisma.project.findFirst({
+        where: {
+          id: result.data.projectId,
+          userId: DEV_USER_ID
         }
-      );
+      });
+
+      if (!project) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Project not found"
+          },
+          {
+            status: 404
+          }
+        );
+      }
     }
+
+    const newTask = await prisma.task.create({
+      data: {
+        title: result.data.title,
+        priority: result.data.priority,
+        dueDate: new Date(result.data.dueDate),
+        estimatedHours: result.data.estimatedHours ?? null,
+        status: "TODO",
+
+        userId: DEV_USER_ID,
+
+        projectId: result.data.projectId ?? null
+      }
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: newTask
+      },
+      {
+        status: 201
+      }
+    );
+  } catch (error) {
+    console.error("Failed to create task:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to create task",
+      },
+      {
+        status: 500,
+      }
+    );
   }
-
-  const newTask = {
-    id: Math.max(...tasks.map((task) => task.id), 0) + 1,
-    ...result.data,
-    status: "TODO" as const,
-  };
-
-  tasks.push(newTask);
-
-  if (newTask.projectId !== undefined) {
-    updateProjectProgress(newTask.projectId);
-  }
-
-  return NextResponse.json(
-    {
-      success: true,
-      data: newTask,
-    },
-    {
-      status: 201,
-    }
-  );
 }

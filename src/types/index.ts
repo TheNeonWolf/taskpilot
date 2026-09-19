@@ -8,13 +8,24 @@ export type Project = {
     description: string;
     progress: number;
     status: ProjectStatus;
+
+    userId: number,
+
+    createdAt: string;
+    updatedAt: string;
 };
 
 export type Task = {
     id: number;
-    projectId?: number;
     title: string;
     status: TaskStatus;
     priority: TaskPriority;
     dueDate: string;
+    extimatedHours: number | null;
+
+    userId: number;
+    projectId: number | null;
+
+    createdAt: string;
+    updatedAt: string;
 };

@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import SearchFilter from "@/components/SearchFilter";
 import TaskCard from "@/components/TaskCard";
-import { tasks } from "@/data/mockData";
 import { Task } from "@/types";
 import ConfirmModal from "@/components/ConfirmModal";
 import EmptyState from "@/components/EmptyState";
@@ -14,8 +13,34 @@ export default function TasksPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
   const [priority, setPriority] = useState("ALL");
-  const [taskList, setTaskList] = useState(tasks);
+
+  const [taskList, setTaskList] = useState<Task[]>([]);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const response = await fetch("/api/tasks");
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || "Failed to fetch tasks");
+        }
+
+        setTaskList(result.data);
+      } catch (error) {
+        console.error("Failed to fetch tasks:", error);
+        setError("Failed to load tasks");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTasks();
+  }, []);
 
   const filteredTasks = taskList.filter((task) => {
     const matchesSearch = task.title
@@ -31,44 +56,132 @@ export default function TasksPage() {
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
-  const handleStatusChange = (
+  const handleStatusChange = async (
     taskId: number,
     newStatus: "TODO" | "IN_PROGRESS" | "DONE"
   ) => {
-    setTaskList((currentTasks) =>
-      currentTasks.map((task) =>
-        task.id === taskId
-          ? { ...task, status: newStatus }
-          : task
-      )
-    );
+    try {
+      const response = await fetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: newStatus,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to update task");
+      }
+
+      setTaskList((currentTasks) =>
+        currentTasks.map((task) =>
+          task.id === taskId
+            ? result.data
+            : task
+        )
+      );
+    } catch (error) {
+      console.error("Failed to update task status:", error);
+      setError("Failed to update task");
+    }
   };
 
-  const handlePriorityChange = (
+  const handlePriorityChange = async (
     taskId: number,
     newPriority: "LOW" | "MEDIUM" | "HIGH"
   ) => {
-    setTaskList((currentTasks) =>
-      currentTasks.map((task) =>
-        task.id === taskId
-          ? { ...task, priority: newPriority }
-          : task
-      )
-    );
+    try {
+      const response = await fetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          priority: newPriority,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to update task");
+      }
+
+      setTaskList((currentTasks) =>
+        currentTasks.map((task) =>
+          task.id === taskId
+            ? result.data
+            : task
+        )
+      );
+    } catch (error) {
+      console.error("Failed to update task priority:", error);
+      setError("Failed to update task");
+    }
   };
 
-  const handleDeleteTask = () => {
-    if(!taskToDelete) {
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) {
       return;
     }
 
-    setTaskList((currentTasks) =>
-      currentTasks.filter(
-        (tasks) => tasks.id !== taskToDelete.id
-      )
+    try {
+      const response = await fetch(
+        `/api/tasks/${taskToDelete.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to delete task");
+      }
+
+      setTaskList((currentTasks) =>
+        currentTasks.filter(
+          (task) => task.id !== taskToDelete.id
+        )
+      );
+
+      setTaskToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete task:", error);
+      setError("Failed to delete task");
+    }
+  };
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+
+        <main className="mx-auto max-w-7xl px-6 py-8">
+          <p className="text-gray-600 dark:text-gray-400">
+            Loading tasks...
+          </p>
+        </main>
+      </>
     );
-    
-    setTaskToDelete(null);
+  }
+
+  if (error) {
+    return (
+      <>
+        <Navbar />
+
+        <main className="mx-auto max-w-7xl px-6 py-8">
+          <p className="text-red-600">
+            {error}
+          </p>
+        </main>
+      </>
+    );
   }
 
   return (
@@ -120,35 +233,18 @@ export default function TasksPage() {
                 />
               ))}
             </div>
+          ) : taskList.length === 0 ? (
+            <EmptyState
+              icon={<ListTodo size={40} />}
+              title="No tasks yet"
+              message="Create your first task to start tracking your work."
+            />
           ) : (
-            <div className="mt-8">
-              {taskList.length === 0 ? (
-                <EmptyState
-                  icon={<ListTodo size={40} />}
-                  title="No tasks yet"
-                  message="Create your first task to start tracking your work."
-                />
-              ) : filteredTasks.length === 0 ? (
-                <EmptyState
-                  icon={<SearchX size={40} />}
-                  title="No tasks found"
-                  message="Try changing your search or filters."
-                />
-              ) : (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {filteredTasks.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      searchQuery={search}
-                      onStatusChange={handleStatusChange}
-                      onPriorityChange={handlePriorityChange}
-                      onDelete={setTaskToDelete}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+            <EmptyState
+              icon={<SearchX size={40} />}
+              title="No tasks found"
+              message="Try changing your search or filters."
+            />
           )}
         </div>
       </main>

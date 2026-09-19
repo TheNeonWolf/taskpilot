@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { projects, tasks } from "@/data/mockData";
+import { prisma } from "@/lib/prisma";
+
+const DEV_USER_ID = 1;
 
 export async function GET(
     request: Request,
@@ -20,28 +22,51 @@ export async function GET(
       );
     }
 
-    const project = projects.find(
-        (project) => project.id === projectId
-    )
+    try {
+      const project = await prisma.project.findFirst({
+        where: {
+          id: projectId,
+          userId: DEV_USER_ID
+        }
+      });
 
-    if (!project) {
+      if (!project) {
         return NextResponse.json(
-            {
-                success: false,
-                error: "Project not found"
-            },
-            {
-                status: 404
-            }
+          {
+            success: false,
+            error: "Project not found"
+          },
+          {
+            status: 404
+          }
         );
-    }
+      }
 
-    const projectTasks = tasks.filter(
-        (task) => task.projectId === projectId
-    );
+      const projectTasks = await prisma.task.findMany({
+        where: {
+          projectId: projectId,
+          userId: DEV_USER_ID
+        },
+        orderBy: {
+          id: "asc"
+        }
+      });
 
-    return NextResponse.json({
+      return NextResponse.json({
         success: true,
         data: projectTasks
-    });
+      });
+    } catch (error) {
+      console.error("Failed to fetch project tasks:", error);
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Failed to fetch project tasks"
+        },
+        {
+          status: 500
+        }
+      );
+    }
 }
