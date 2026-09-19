@@ -1,14 +1,21 @@
 # TaskPilot
 
-TaskPilot is a responsive project and task management dashboard built as part of the **Innovation Hacks Full Stack Development Internship**.
+TaskPilot is a responsive full-stack project and task management application built as part of the **Innovation Hacks Full Stack Development Internship**.
 
-This repository currently contains the **Task 1 frontend implementation**, focusing on responsive UI design, reusable React components, task/project visualization, filtering, loading states, error handling, and dark mode.
+The project has progressed through three main stages:
+
+- **Task 1:** Responsive frontend dashboard and reusable UI components
+- **Task 2:** REST API development for projects and tasks
+- **Task 3:** PostgreSQL database integration using Prisma ORM
+
+TaskPilot now supports persistent project and task management with full CRUD operations, project-task relationships, task prioritization, progress tracking, form validation, responsive design, and dark mode.
 
 ---
 
-## Features
+## Current Features
 
 ### Dashboard
+
 - Project and task overview
 - Dynamic statistics:
   - Total Projects
@@ -20,107 +27,87 @@ This repository currently contains the **Task 1 frontend implementation**, focus
 - Project completion doughnut chart
 - Task status bar chart
 - Interactive chart hover effects
+- Live data loaded from the database
 
-### Project Management UI
+---
+
+## Project Management
+
+Users can:
+
 - View all projects
-- Project status indicators
-- Progress bars
-- Project search
-- Search result highlighting
-- Update button UI
-- Delete project confirmation modal
-- Empty states
+- Create new projects
+- Add initial tasks while creating a project
+- Update existing projects
+- Delete projects
+- Search projects
+- View project status
+- View dynamically calculated project progress
+- Store project data persistently in PostgreSQL
 
-### Task Management UI
+### Project Information
+
+Each project contains:
+
+- Name
+- Description
+- Status
+- User association
+- Related tasks
+- Creation timestamp
+- Last updated timestamp
+
+Project descriptions are limited to **200 characters** to maintain consistent card layouts.
+
+---
+
+## Task Management
+
+Users can:
+
 - View all tasks
+- Create standalone tasks
+- Create tasks linked to projects
+- Create tasks while creating a project
+- Update existing tasks
+- Move tasks between projects
+- Remove a task from a project
+- Delete tasks
 - Search tasks
-- Filter by task status
-- Filter by priority
-- Search result highlighting
-- Interactive task status controls
-- Interactive priority controls
-- Completed task styling
-- Delete task confirmation modal
-- Empty states
+- Filter tasks by status
+- Filter tasks by priority
+- Change task status directly from task cards
+- Change task priority directly from task cards
 
-### Responsive Design
-TaskPilot is responsive across:
+### Task Information
 
-- Desktop
-- Tablet
-- Mobile
+Each task contains:
 
-On smaller devices, the navigation automatically changes to a hamburger menu and dashboard layouts adapt to the available screen size.
+- Title
+- Status
+- Priority
+- Due date
+- Optional estimated hours
+- Optional project association
+- User association
+- Creation timestamp
+- Last updated timestamp
 
-### Dark Mode
-- Light and dark themes
-- Theme preference persistence
-- Responsive theme toggle
-- Dark-mode support across cards, charts, filters, modals, loading states, empty states, and error states
+Task cards display:
 
-### UI States
-TaskPilot includes reusable:
-
-- Loading skeletons
-- Empty states
-- Error states
-- Confirmation modals
+- Formatted due date
+- Estimated hours, when available
+- Associated project name, when available
+- Status
+- Priority
 
 ---
 
-## Tech Stack
+## Project Progress
 
-- **Next.js**
-- **React**
-- **TypeScript**
-- **Tailwind CSS**
-- **Recharts**
-- **Lucide React**
-- **next-themes**
+Project progress is calculated dynamically from the tasks associated with the project.
 
----
-
-## Project Structure
+For example:
 
 ```text
-src/
-├── app/
-│   ├── page.tsx
-│   ├── loading.tsx
-│   ├── error.tsx
-│   ├── projects/
-│   │   ├── page.tsx
-│   │   ├── loading.tsx
-│   │   └── error.tsx
-│   └── tasks/
-│       ├── page.tsx
-│       ├── loading.tsx
-│       └── error.tsx
-│
-├── components/
-│   ├── Navbar.tsx
-│   ├── ThemeToggle.tsx
-│   ├── ThemeProvider.tsx
-│   ├── StatCard.tsx
-│   ├── ProjectCard.tsx
-│   ├── TaskCard.tsx
-│   ├── ProgressBar.tsx
-│   ├── SearchFilter.tsx
-│   ├── ConfirmModal.tsx
-│   ├── EmptyState.tsx
-│   ├── ErrorState.tsx
-│   ├── charts/
-│   │   ├── TaskStatusChart.tsx
-│   │   └── ProjectCompletionChart.tsx
-│   └── skeletons/
-│       ├── Skeleton.tsx
-│       ├── StatCardSkeleton.tsx
-│       ├── ProjectCardSkeleton.tsx
-│       ├── TaskCardSkeleton.tsx
-│       └── ChartSkeleton.tsx
-│
-├── data/
-│   └── mockData.ts
-│
-└── types/
-    └── index.ts
+Completed Tasks / Total Project Tasks × 100
