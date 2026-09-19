@@ -21,7 +21,7 @@ export type Task = {
     status: TaskStatus;
     priority: TaskPriority;
     dueDate: string;
-    extimatedHours: number | null;
+    estimatedHours: number | null;
 
     userId: number;
     projectId: number | null;

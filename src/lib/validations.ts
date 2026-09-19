@@ -23,7 +23,8 @@ const projectBaseSchema = z.object({
 
   description: z
     .string()
-    .min(1, "Description is required"),
+    .min(1, "Description is required")
+    .max(200, "Description cannot exceed 200 characters"),
 
   status: z.enum(["ACTIVE", "COMPLETED"]),
 });

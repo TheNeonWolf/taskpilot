@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import SearchFilter from "@/components/SearchFilter";
 import TaskCard from "@/components/TaskCard";
-import { Task } from "@/types";
+import { Project, Task } from "@/types";
 import ConfirmModal from "@/components/ConfirmModal";
 import EmptyState from "@/components/EmptyState";
 import { ListTodo, SearchX } from "lucide-react";
+import TaskFormModal from "@/components/TaskFormModal";
 
 export default function TasksPage() {
   const [search, setSearch] = useState("");
@@ -20,26 +21,62 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const response = await fetch("/api/tasks");
-        const result = await response.json();
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [taskToEdit, setTaskToEdit] =useState<Task | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
 
-        if (!response.ok || !result.success) {
-          throw new Error(result.error || "Failed to fetch tasks");
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [
+          tasksResponse,
+          projectsResponse,
+        ] = await Promise.all([
+          fetch("/api/tasks"),
+          fetch("/api/projects"),
+        ]);
+
+        const tasksResult =
+          await tasksResponse.json();
+
+        const projectsResult =
+          await projectsResponse.json();
+
+        if (
+          !tasksResponse.ok ||
+          !tasksResult.success
+        ) {
+          throw new Error(
+            tasksResult.error ||
+              "Failed to fetch tasks"
+          );
         }
 
-        setTaskList(result.data);
+        if (
+          !projectsResponse.ok ||
+          !projectsResult.success
+        ) {
+          throw new Error(
+            projectsResult.error ||
+              "Failed to fetch projects"
+          );
+        }
+
+        setTaskList(tasksResult.data);
+        setProjects(projectsResult.data);
       } catch (error) {
-        console.error("Failed to fetch tasks:", error);
+        console.error(
+          "Failed to fetch task data:",
+          error
+        );
+
         setError("Failed to load tasks");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTasks();
+    fetchData();
   }, []);
 
   const filteredTasks = taskList.filter((task) => {
@@ -202,6 +239,10 @@ export default function TasksPage() {
 
           <button
             type="button"
+            onClick={() => {
+              setTaskToEdit(null);
+              setShowTaskForm(true);
+            }}
             className="cursor-pointer rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
           >
             + Add Task
@@ -226,9 +267,21 @@ export default function TasksPage() {
                 <TaskCard
                   key={task.id}
                   task={task}
+                  projectName={
+                    task.projectId !== null
+                      ? projects.find(
+                          (project) =>
+                            project.id === task.projectId
+                        )?.name
+                      : undefined
+                  }
                   searchQuery={search}
                   onStatusChange={handleStatusChange}
                   onPriorityChange={handlePriorityChange}
+                  onEdit={(task) => {
+                    setTaskToEdit(task);
+                    setShowTaskForm(true);
+                  }}
                   onDelete={setTaskToDelete}
                 />
               ))}
@@ -257,6 +310,32 @@ export default function TasksPage() {
         }"? This action cannot be undone.`}
         onCancel={() => setTaskToDelete(null)}
         onConfirm={handleDeleteTask}
+      />
+
+      <TaskFormModal
+        isOpen={showTaskForm}
+        task={taskToEdit}
+        onClose={() => {
+          setShowTaskForm(false);
+          setTaskToEdit(null);
+        }}
+        onSaved={(savedTask) => {
+          setTaskList((currentTasks) => {
+            const alreadyExists = currentTasks.some(
+              (task) => task.id === savedTask.id
+            );
+
+            if (alreadyExists) {
+              return currentTasks.map((task) =>
+                task.id === savedTask.id
+                  ? savedTask
+                  : task
+              );
+            }
+
+            return [...currentTasks, savedTask];
+          });
+        }}
       />
     </>
   );
