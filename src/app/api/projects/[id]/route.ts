@@ -1,13 +1,27 @@
 import { NextResponse } from "next/server";
+
 import { projectUpdateSchema } from "@/lib/validations";
 import { prisma } from "@/lib/prisma";
-
-const DEV_USER_ID = 1;
+import { getAuthenticatedUserId } from "@/lib/auth-server";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const userId = await getAuthenticatedUserId();
+
+  if (!userId) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Not authenticated",
+      },
+      {
+        status: 401,
+      }
+    );
+  }
+
   const { id } = await params;
   const projectId = Number(id);
 
@@ -27,8 +41,9 @@ export async function GET(
     const project = await prisma.project.findFirst({
       where: {
         id: projectId,
-        userId: DEV_USER_ID,
+        userId,
       },
+
       include: {
         tasks: {
           select: {
@@ -89,6 +104,20 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const userId = await getAuthenticatedUserId();
+
+  if (!userId) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Not authenticated",
+      },
+      {
+        status: 401,
+      }
+    );
+  }
+
   const { id } = await params;
   const projectId = Number(id);
 
@@ -105,12 +134,13 @@ export async function PATCH(
   }
 
   try {
-    const existingProject = await prisma.project.findFirst({
-      where: {
-        id: projectId,
-        userId: DEV_USER_ID,
-      },
-    });
+    const existingProject =
+      await prisma.project.findFirst({
+        where: {
+          id: projectId,
+          userId,
+        },
+      });
 
     if (!existingProject) {
       return NextResponse.json(
@@ -140,7 +170,8 @@ export async function PATCH(
       );
     }
 
-    const result = projectUpdateSchema.safeParse(body);
+    const result =
+      projectUpdateSchema.safeParse(body);
 
     if (!result.success) {
       return NextResponse.json(
@@ -154,32 +185,41 @@ export async function PATCH(
       );
     }
 
-    const updatedProject = await prisma.project.update({
-      where: {
-        id: projectId,
-      },
-      data: result.data,
-      include: {
-        tasks: {
-          select: {
-            status: true,
+    const updatedProject =
+      await prisma.project.update({
+        where: {
+          id: projectId,
+        },
+
+        data: result.data,
+
+        include: {
+          tasks: {
+            select: {
+              status: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    const completedTasks = updatedProject.tasks.filter(
-      (task) => task.status === "DONE"
-    ).length;
+    const completedTasks =
+      updatedProject.tasks.filter(
+        (task) => task.status === "DONE"
+      ).length;
 
     const progress =
       updatedProject.tasks.length === 0
         ? 0
         : Math.round(
-            (completedTasks / updatedProject.tasks.length) * 100
+            (completedTasks /
+              updatedProject.tasks.length) *
+              100
           );
 
-    const { tasks, ...projectData } = updatedProject;
+    const {
+      tasks,
+      ...projectData
+    } = updatedProject;
 
     return NextResponse.json({
       success: true,
@@ -207,6 +247,20 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const userId = await getAuthenticatedUserId();
+
+  if (!userId) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Not authenticated",
+      },
+      {
+        status: 401,
+      }
+    );
+  }
+
   const { id } = await params;
   const projectId = Number(id);
 
@@ -223,19 +277,21 @@ export async function DELETE(
   }
 
   try {
-    const existingProject = await prisma.project.findFirst({
-      where: {
-        id: projectId,
-        userId: DEV_USER_ID,
-      },
-      include: {
-        tasks: {
-          select: {
-            status: true,
+    const existingProject =
+      await prisma.project.findFirst({
+        where: {
+          id: projectId,
+          userId,
+        },
+
+        include: {
+          tasks: {
+            select: {
+              status: true,
+            },
           },
         },
-      },
-    });
+      });
 
     if (!existingProject) {
       return NextResponse.json(
@@ -249,22 +305,26 @@ export async function DELETE(
       );
     }
 
-    const completedTasks = existingProject.tasks.filter(
-      (task) => task.status === "DONE"
-    ).length;
+    const completedTasks =
+      existingProject.tasks.filter(
+        (task) => task.status === "DONE"
+      ).length;
 
     const progress =
       existingProject.tasks.length === 0
         ? 0
         : Math.round(
-            (completedTasks / existingProject.tasks.length) * 100
+            (completedTasks /
+              existingProject.tasks.length) *
+              100
           );
 
-    const deletedProject = await prisma.project.delete({
-      where: {
-        id: projectId,
-      },
-    });
+    const deletedProject =
+      await prisma.project.delete({
+        where: {
+          id: projectId,
+        },
+      });
 
     return NextResponse.json({
       success: true,

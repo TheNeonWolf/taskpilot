@@ -2,13 +2,46 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
+
 import ThemeToggle from "@/components/ThemeToggle";
+
+type CurrentUser = {
+  id: number;
+  name: string;
+  username: string;
+  email: string;
+};
 
 export default function Navbar() {
   const pathname = usePathname();
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [user, setUser] = useState<CurrentUser | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await fetch("/api/auth/me");
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          return;
+        }
+
+        setUser(result.data);
+      } catch (error) {
+        console.error(
+          "Failed to fetch navbar user:",
+          error
+        );
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const isActive = (href: string) => {
     if (href === "/") {
@@ -25,25 +58,40 @@ export default function Navbar() {
         : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
     }`;
 
+  const initial =
+    user?.username.trim().charAt(0).toUpperCase() || "U";
+
+  const displayName = user?.name || "User";
+
   return (
     <nav className="border-b border-gray-200 bg-white transition-colors dark:border-gray-800 dark:bg-gray-900">
       <div className="mx-auto max-w-7xl px-6">
         <div className="flex items-center justify-between py-4">
+          {/* Logo */}
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">
             TaskPilot
           </h1>
 
           {/* Desktop navigation */}
           <div className="hidden items-center gap-8 md:flex">
-            <Link href="/" className={linkClass("/")}>
+            <Link
+              href="/"
+              className={linkClass("/")}
+            >
               Dashboard
             </Link>
 
-            <Link href="/projects" className={linkClass("/projects")}>
+            <Link
+              href="/projects"
+              className={linkClass("/projects")}
+            >
               Projects
             </Link>
 
-            <Link href="/tasks" className={linkClass("/tasks")}>
+            <Link
+              href="/tasks"
+              className={linkClass("/tasks")}
+            >
               Tasks
             </Link>
           </div>
@@ -52,24 +100,35 @@ export default function Navbar() {
           <div className="hidden items-center gap-3 md:flex">
             <ThemeToggle />
 
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100">
-              T
-            </div>
+            <Link
+              href="/me"
+              className="flex items-center gap-3 rounded-lg px-2 py-1 transition hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 font-medium text-gray-900 dark:bg-gray-700 dark:text-gray-100">
+                {initial}
+              </div>
 
-            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              Test
-            </span>
+              <span className="max-w-32 truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                {displayName}
+              </span>
+            </Link>
           </div>
 
           {/* Mobile hamburger */}
           <button
             type="button"
-            onClick={() => setIsMenuOpen((open) => !open)}
-            className="cursor-pointer flex h-10 w-10 items-center justify-center rounded-lg text-gray-700 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 md:hidden"
+            onClick={() =>
+              setIsMenuOpen((open) => !open)
+            }
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-gray-700 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 md:hidden"
             aria-label="Toggle navigation menu"
             aria-expanded={isMenuOpen}
           >
-            {isMenuOpen ? <X size={21} /> : <Menu size={21} />}
+            {isMenuOpen ? (
+              <X size={21} />
+            ) : (
+              <Menu size={21} />
+            )}
           </button>
         </div>
 
@@ -78,14 +137,25 @@ export default function Navbar() {
           <div className="border-t border-gray-200 py-4 dark:border-gray-800 md:hidden">
             <div className="flex flex-col gap-1">
               {[
-                { href: "/", label: "Dashboard" },
-                { href: "/projects", label: "Projects" },
-                { href: "/tasks", label: "Tasks" },
+                {
+                  href: "/",
+                  label: "Dashboard",
+                },
+                {
+                  href: "/projects",
+                  label: "Projects",
+                },
+                {
+                  href: "/tasks",
+                  label: "Tasks",
+                },
               ].map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={() =>
+                    setIsMenuOpen(false)
+                  }
                   className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
                     isActive(link.href)
                       ? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white"
@@ -97,16 +167,23 @@ export default function Navbar() {
               ))}
             </div>
 
+            {/* Mobile profile */}
             <div className="mt-3 flex items-center justify-between border-t border-gray-200 px-3 pt-4 dark:border-gray-800">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100">
-                  T
+              <Link
+                href="/me"
+                onClick={() =>
+                  setIsMenuOpen(false)
+                }
+                className="flex items-center gap-3 rounded-lg px-2 py-1 transition hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 font-medium text-gray-900 dark:bg-gray-700 dark:text-gray-100">
+                  {initial}
                 </div>
 
                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  Test
+                  {displayName}
                 </span>
-              </div>
+              </Link>
 
               <ThemeToggle />
             </div>

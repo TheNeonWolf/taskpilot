@@ -5,10 +5,15 @@ import type { SyntheticEvent } from "react";
 
 import {
   Project,
+  Task,
   TaskPriority,
+  TaskStatus,
 } from "@/types";
 
 import {
+  CheckCircle2,
+  Circle,
+  Clock3,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -41,13 +46,23 @@ export default function ProjectFormModal({
   const [description, setDescription] =
     useState("");
 
-  const [status, setStatus] =
-    useState<"ACTIVE" | "COMPLETED">(
-      "ACTIVE"
-    );
-
+  // Used only when creating a new project.
   const [tasks, setTasks] =
     useState<NewProjectTask[]>([]);
+
+  // Used only when editing an existing project.
+  const [existingTasks, setExistingTasks] =
+    useState<Task[]>([]);
+
+  // Keeps track of the original task statuses
+  // so we only PATCH tasks that actually changed.
+  const [
+    originalTaskStatuses,
+    setOriginalTaskStatuses,
+  ] = useState<Record<number, TaskStatus>>({});
+
+  const [tasksLoading, setTasksLoading] =
+    useState(false);
 
   const [submitting, setSubmitting] =
     useState(false);
@@ -64,15 +79,71 @@ export default function ProjectFormModal({
     if (project) {
       setName(project.name);
       setDescription(project.description);
-      setStatus(project.status);
-
-      // Existing tasks are edited from the Tasks page.
       setTasks([]);
+
+      const fetchProjectTasks = async () => {
+        setTasksLoading(true);
+
+        try {
+          const response = await fetch(
+            `/api/projects/${project.id}/tasks`
+          );
+
+          const result = await response.json();
+
+          if (
+            !response.ok ||
+            !result.success
+          ) {
+            throw new Error(
+              typeof result.error === "string"
+                ? result.error
+                : "Failed to load project tasks"
+            );
+          }
+
+          const fetchedTasks: Task[] =
+            result.data;
+
+          setExistingTasks(fetchedTasks);
+
+          const statuses: Record<
+            number,
+            TaskStatus
+          > = {};
+
+          fetchedTasks.forEach((task) => {
+            statuses[task.id] = task.status;
+          });
+
+          setOriginalTaskStatuses(statuses);
+        } catch (error) {
+          console.error(
+            "Failed to fetch project tasks:",
+            error
+          );
+
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Failed to load project tasks."
+          );
+
+          setExistingTasks([]);
+          setOriginalTaskStatuses({});
+        } finally {
+          setTasksLoading(false);
+        }
+      };
+
+      fetchProjectTasks();
     } else {
       setName("");
       setDescription("");
-      setStatus("ACTIVE");
       setTasks([]);
+      setExistingTasks([]);
+      setOriginalTaskStatuses({});
+      setTasksLoading(false);
     }
   }, [project, isOpen]);
 
@@ -117,11 +188,29 @@ export default function ProjectFormModal({
     );
   };
 
+  const updateExistingTaskStatus = (
+    taskId: number,
+    status: TaskStatus
+  ) => {
+    setExistingTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              status,
+            }
+          : task
+      )
+    );
+  };
+
   const resetForm = () => {
     setName("");
     setDescription("");
-    setStatus("ACTIVE");
     setTasks([]);
+    setExistingTasks([]);
+    setOriginalTaskStatuses({});
+    setTasksLoading(false);
     setError("");
   };
 
@@ -133,6 +222,21 @@ export default function ProjectFormModal({
     resetForm();
     onClose();
   };
+
+  const completedTaskCount =
+    existingTasks.filter(
+      (task) => task.status === "DONE"
+    ).length;
+
+  const calculatedStatus:
+    | "ACTIVE"
+    | "COMPLETED" =
+    existingTasks.length > 0 &&
+    existingTasks.every(
+      (task) => task.status === "DONE"
+    )
+      ? "COMPLETED"
+      : "ACTIVE";
 
   const handleSubmit = async (
     event: SyntheticEvent<HTMLFormElement>
@@ -162,8 +266,8 @@ export default function ProjectFormModal({
       return;
     }
 
-    // Only validate initial tasks when
-    // creating a new project.
+    // Validate initial tasks only
+    // when creating a project.
     if (!isEditing) {
       for (
         let index = 0;
@@ -209,79 +313,192 @@ export default function ProjectFormModal({
     setSubmitting(true);
 
     try {
-      const payload = isEditing
-        ? {
-            name: name.trim(),
-            description:
-              description.trim(),
-            status,
+      if (isEditing && project) {
+        /*
+         * 1. Update task statuses first.
+         *
+         * We do these sequentially rather than with
+         * Promise.all because each task PATCH can
+         * recalculate the project's automatic status.
+         */
+        for (const task of existingTasks) {
+          const originalStatus =
+            originalTaskStatuses[
+              task.id
+            ];
+
+          if (
+            originalStatus !== task.status
+          ) {
+            const taskResponse =
+              await fetch(
+                `/api/tasks/${task.id}`,
+                {
+                  method: "PATCH",
+
+                  headers: {
+                    "Content-Type":
+                      "application/json",
+                  },
+
+                  body: JSON.stringify({
+                    status: task.status,
+                  }),
+                }
+              );
+
+            const taskResult =
+              await taskResponse.json();
+
+            if (
+              !taskResponse.ok ||
+              !taskResult.success
+            ) {
+              throw new Error(
+                typeof taskResult.error ===
+                  "string"
+                  ? taskResult.error
+                  : `Failed to update task "${task.title}"`
+              );
+            }
           }
-        : {
-            name: name.trim(),
-            description:
-              description.trim(),
-            status,
-
-            tasks: tasks.map(
-              (task) => ({
-                title:
-                  task.title.trim(),
-
-                priority:
-                  task.priority,
-
-                dueDate:
-                  task.dueDate,
-
-                estimatedHours:
-                  task.estimatedHours ===
-                  ""
-                    ? undefined
-                    : Number(
-                        task.estimatedHours
-                      ),
-              })
-            ),
-          };
-
-      const response = await fetch(
-        isEditing
-          ? `/api/projects/${project.id}`
-          : "/api/projects",
-        {
-          method: isEditing
-            ? "PATCH"
-            : "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify(
-            payload
-          ),
         }
-      );
 
-      const result =
-        await response.json();
+        /*
+         * 2. Update only the editable
+         * project fields.
+         *
+         * Status is NOT sent because it is
+         * controlled automatically by tasks.
+         */
+        const projectResponse =
+          await fetch(
+            `/api/projects/${project.id}`,
+            {
+              method: "PATCH",
 
-      if (
-        !response.ok ||
-        !result.success
-      ) {
-        throw new Error(
-          typeof result.error ===
-            "string"
-            ? result.error
-            : isEditing
-              ? "Failed to update project"
-              : "Failed to create project"
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body: JSON.stringify({
+                name: name.trim(),
+                description:
+                  description.trim(),
+              }),
+            }
+          );
+
+        const projectResult =
+          await projectResponse.json();
+
+        if (
+          !projectResponse.ok ||
+          !projectResult.success
+        ) {
+          throw new Error(
+            typeof projectResult.error ===
+              "string"
+              ? projectResult.error
+              : "Failed to update project"
+          );
+        }
+
+        /*
+         * 3. Fetch the project again.
+         *
+         * This gives us the final automatic
+         * status and progress after all task
+         * status changes.
+         */
+        const refreshedResponse =
+          await fetch(
+            `/api/projects/${project.id}`
+          );
+
+        const refreshedResult =
+          await refreshedResponse.json();
+
+        if (
+          !refreshedResponse.ok ||
+          !refreshedResult.success
+        ) {
+          throw new Error(
+            typeof refreshedResult.error ===
+              "string"
+              ? refreshedResult.error
+              : "Failed to refresh project"
+          );
+        }
+
+        onSaved(refreshedResult.data);
+      } else {
+        /*
+         * New project.
+         *
+         * Projects always begin ACTIVE.
+         * Their status is controlled automatically
+         * after creation.
+         */
+        const response = await fetch(
+          "/api/projects",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              name: name.trim(),
+
+              description:
+                description.trim(),
+              
+
+              tasks: tasks.map(
+                (task) => ({
+                  title:
+                    task.title.trim(),
+
+                  priority:
+                    task.priority,
+
+                  dueDate:
+                    task.dueDate,
+
+                  estimatedHours:
+                    task.estimatedHours ===
+                    ""
+                      ? undefined
+                      : Number(
+                          task.estimatedHours
+                        ),
+                })
+              ),
+            }),
+          }
         );
-      }
 
-      onSaved(result.data);
+        const result =
+          await response.json();
+
+        if (
+          !response.ok ||
+          !result.success
+        ) {
+          throw new Error(
+            typeof result.error ===
+              "string"
+              ? result.error
+              : "Failed to create project"
+          );
+        }
+
+        onSaved(result.data);
+      }
 
       resetForm();
       onClose();
@@ -370,34 +587,189 @@ export default function ProjectFormModal({
             </p>
           </div>
 
-          {/* Status */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Status
-            </label>
+          {/* Automatic status - edit only */}
+          {isEditing && (
+            <div>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Status
+              </label>
 
-            <select
-              value={status}
-              onChange={(event) =>
-                setStatus(
-                  event.target.value as
-                    | "ACTIVE"
-                    | "COMPLETED"
-                )
-              }
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800"
-            >
-              <option value="ACTIVE">
-                Active
-              </option>
+              <div className="mt-1 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
+                <div className="flex items-center gap-2">
+                  {calculatedStatus ===
+                  "COMPLETED" ? (
+                    <CheckCircle2
+                      size={18}
+                      className="text-green-600 dark:text-green-400"
+                    />
+                  ) : (
+                    <Clock3
+                      size={18}
+                      className="text-blue-600 dark:text-blue-400"
+                    />
+                  )}
 
-              <option value="COMPLETED">
-                Completed
-              </option>
-            </select>
-          </div>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {calculatedStatus ===
+                    "COMPLETED"
+                      ? "Completed"
+                      : "Active"}
+                  </span>
+                </div>
 
-          {/* Initial tasks only when creating */}
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Project status is updated
+                  automatically based on task
+                  completion.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Existing tasks - edit only */}
+          {isEditing && (
+            <div className="border-t border-gray-200 pt-5 dark:border-gray-800">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    Project Tasks
+                  </h3>
+
+                  {!tasksLoading && (
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      {completedTaskCount} of{" "}
+                      {existingTasks.length}{" "}
+                      tasks completed
+                    </p>
+                  )}
+                </div>
+
+                {!tasksLoading &&
+                  existingTasks.length >
+                    0 && (
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                      {Math.round(
+                        (completedTaskCount /
+                          existingTasks.length) *
+                          100
+                      )}
+                      %
+                    </span>
+                  )}
+              </div>
+
+              {tasksLoading ? (
+                <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                  Loading tasks...
+                </p>
+              ) : existingTasks.length ===
+                0 ? (
+                <div className="mt-4 rounded-lg border border-dashed border-gray-300 p-5 text-center dark:border-gray-700">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    No tasks in this
+                    project yet
+                  </p>
+
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Add a task from the
+                    Tasks page and assign
+                    it to this project.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {existingTasks.map(
+                    (task) => (
+                      <div
+                        key={task.id}
+                        className="rounded-lg border border-gray-200 p-4 dark:border-gray-700"
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              {task.status ===
+                              "DONE" ? (
+                                <CheckCircle2
+                                  size={17}
+                                  className="shrink-0 text-green-600 dark:text-green-400"
+                                />
+                              ) : task.status ===
+                                "IN_PROGRESS" ? (
+                                <Clock3
+                                  size={17}
+                                  className="shrink-0 text-blue-600 dark:text-blue-400"
+                                />
+                              ) : (
+                                <Circle
+                                  size={17}
+                                  className="shrink-0 text-gray-400"
+                                />
+                              )}
+
+                              <p className="truncate font-medium text-gray-900 dark:text-white">
+                                {task.title}
+                              </p>
+                            </div>
+
+                            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                              <span>
+                                Priority:{" "}
+                                {task.priority}
+                              </span>
+
+                              {task.estimatedHours !==
+                                null && (
+                                <span>
+                                  {
+                                    task.estimatedHours
+                                  }{" "}
+                                  hr
+                                  {task.estimatedHours !==
+                                  1
+                                    ? "s"
+                                    : ""}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <select
+                            value={
+                              task.status
+                            }
+                            onChange={(
+                              event
+                            ) =>
+                              updateExistingTaskStatus(
+                                task.id,
+                                event.target
+                                  .value as TaskStatus
+                              )
+                            }
+                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white sm:w-40"
+                          >
+                            <option value="TODO">
+                              Todo
+                            </option>
+
+                            <option value="IN_PROGRESS">
+                              In Progress
+                            </option>
+
+                            <option value="DONE">
+                              Done
+                            </option>
+                          </select>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Initial tasks - create only */}
           {!isEditing && (
             <div className="border-t border-gray-200 pt-5 dark:border-gray-800">
               <div className="flex items-center justify-between gap-4">
@@ -407,7 +779,8 @@ export default function ProjectFormModal({
                   </h3>
 
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Optional tasks to create with this project.
+                    Optional tasks to create
+                    with this project.
                   </p>
                 </div>
 
@@ -430,8 +803,7 @@ export default function ProjectFormModal({
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Task{" "}
-                          {index + 1}
+                          Task {index + 1}
                         </span>
 
                         <button
@@ -442,7 +814,9 @@ export default function ProjectFormModal({
                             )
                           }
                           title="Remove task"
-                          aria-label={`Remove Task ${index + 1}`}
+                          aria-label={`Remove Task ${
+                            index + 1
+                          }`}
                           className="cursor-pointer rounded-lg p-2 text-red-500 transition hover:bg-red-50 dark:hover:bg-red-950"
                         >
                           <Trash2
@@ -597,7 +971,10 @@ export default function ProjectFormModal({
 
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={
+                  submitting ||
+                  tasksLoading
+                }
                 className="cursor-pointer rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
               >
                 {submitting

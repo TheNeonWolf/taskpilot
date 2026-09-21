@@ -1,54 +1,82 @@
 import { NextResponse } from "next/server";
+
 import { projectCreateSchema } from "@/lib/validations";
 import { prisma } from "@/lib/prisma";
-import { success } from "zod";
-
-const DEV_USER_ID = 1;
+import { getAuthenticatedUserId } from "@/lib/auth-server";
 
 export async function GET() {
-  try {
-    const dbProjects = await prisma.project.findMany({
-      where: {
-        userId: DEV_USER_ID,
+  const userId =
+    await getAuthenticatedUserId();
+
+  if (!userId) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Not authenticated",
       },
-      include: {
-        tasks: {
-          select: {
-            status: true,
+      {
+        status: 401,
+      }
+    );
+  }
+
+  try {
+    const dbProjects =
+      await prisma.project.findMany({
+        where: {
+          userId,
+        },
+
+        include: {
+          tasks: {
+            select: {
+              status: true,
+            },
           },
         },
-      },
-      orderBy: {
-        id: "asc",
-      },
-    });
 
-    const projectsWithProgress = dbProjects.map((project) => {
-      const completedTasks = project.tasks.filter(
-        (task) => task.status === "DONE"
-      ).length;
+        orderBy: {
+          id: "asc",
+        },
+      });
 
-      const progress =
-        project.tasks.length === 0
-          ? 0
-          : Math.round(
-              (completedTasks / project.tasks.length) * 100
-            );
+    const projectsWithProgress =
+      dbProjects.map((project) => {
+        const completedTasks =
+          project.tasks.filter(
+            (task) =>
+              task.status === "DONE"
+          ).length;
 
-      const { tasks, ...projectData } = project;
+        const progress =
+          project.tasks.length === 0
+            ? 0
+            : Math.round(
+                (completedTasks /
+                  project.tasks.length) *
+                  100
+              );
 
-      return {
-        ...projectData,
-        progress,
-      };
-    });
+        const {
+          tasks,
+          ...projectData
+        } = project;
+
+        return {
+          ...projectData,
+          progress,
+        };
+      });
 
     return NextResponse.json({
       success: true,
       data: projectsWithProgress,
     });
   } catch (error) {
-    console.error("Failed to fetch projects:", error);
+    console.error(
+      "Failed to fetch projects:",
+      error
+    );
 
     return NextResponse.json(
       {
@@ -62,7 +90,24 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request
+) {
+  const userId =
+    await getAuthenticatedUserId();
+
+  if (!userId) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Not authenticated",
+      },
+      {
+        status: 401,
+      }
+    );
+  }
+
   let body;
 
   try {
@@ -71,15 +116,16 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: false,
-        error: "Invalid JSON body"
+        error: "Invalid JSON body",
       },
       {
-        status: 400
+        status: 400,
       }
     );
   }
 
-  const result = projectCreateSchema.safeParse(body);
+  const result =
+    projectCreateSchema.safeParse(body);
 
   if (!result.success) {
     return NextResponse.json(
@@ -99,50 +145,65 @@ export async function POST(request: Request) {
   } = result.data;
 
   try {
-    const newProject = await prisma.project.create({
-      data: {
-        ...projectData,
-        userId: DEV_USER_ID,
+    const newProject =
+      await prisma.project.create({
+        data: {
+          ...projectData,
 
-        tasks: {
-          create: initialTasks.map((task) => ({
-            title: task.title,
-            priority: task.priority,
-            dueDate: new Date(task.dueDate),
-            status: "TODO",
-            userId: DEV_USER_ID
-          }))
-        }
-      },
+          status: "ACTIVE",
+          userId,
 
-      include: {
-        tasks: true
-      }
-    });
+          tasks: {
+            create: initialTasks.map(
+              (task) => ({
+                title: task.title,
+                priority: task.priority,
+                dueDate: new Date(
+                  task.dueDate
+                ),
+                estimatedHours:
+                  task.estimatedHours ??
+                  null,
+                status: "TODO",
+
+                userId,
+              })
+            ),
+          },
+        },
+
+        include: {
+          tasks: true,
+        },
+      });
 
     return NextResponse.json(
       {
         success: true,
+
         data: {
           ...newProject,
           progress: 0,
-        }
+        },
       },
-
       {
-        status: 201
+        status: 201,
       }
     );
   } catch (error) {
-    console.error("Failer to create project:", error);
+    console.error(
+      "Failed to create project:",
+      error
+    );
 
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to create project"
+        error:
+          "Failed to create project",
       },
       {
-        status: 500
+        status: 500,
       }
     );
   }

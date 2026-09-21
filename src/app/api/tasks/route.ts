@@ -1,40 +1,74 @@
 import { NextResponse } from "next/server";
+import { syncProjectStatus } from "@/lib/project-status";
 import { taskCreateSchema } from "@/lib/validations";
 import { prisma } from "@/lib/prisma";
-
-const DEV_USER_ID = 1;
+import { getAuthenticatedUserId } from "@/lib/auth-server";
 
 export async function GET() {
+  const userId = await getAuthenticatedUserId();
+
+  if (!userId) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Not authenticated",
+      },
+      {
+        status: 401,
+      }
+    );
+  }
+
   try {
     const tasks = await prisma.task.findMany({
       where: {
-        userId: DEV_USER_ID
+        userId,
       },
+
       orderBy: {
-        id: "asc"
-      }
+        id: "asc",
+      },
     });
 
     return NextResponse.json({
       success: true,
-      data: tasks
+      data: tasks,
     });
   } catch (error) {
-    console.error("Failed to fetch tasks:", error);
+    console.error(
+      "Failed to fetch tasks:",
+      error
+    );
 
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to fetch tasks"
+        error: "Failed to fetch tasks",
       },
       {
-        status: 500
+        status: 500,
       }
     );
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request
+) {
+  const userId = await getAuthenticatedUserId();
+
+  if (!userId) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Not authenticated",
+      },
+      {
+        status: 401,
+      }
+    );
+  }
+
   let body;
 
   try {
@@ -43,10 +77,10 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: false,
-        error: "Invalid JSON body"
+        error: "Invalid JSON body",
       },
       {
-        status: 400
+        status: 400,
       }
     );
   }
@@ -67,21 +101,22 @@ export async function POST(request: Request) {
 
   try {
     if (result.data.projectId !== undefined) {
-      const project = await prisma.project.findFirst({
-        where: {
-          id: result.data.projectId,
-          userId: DEV_USER_ID
-        }
-      });
+      const project =
+        await prisma.project.findFirst({
+          where: {
+            id: result.data.projectId,
+            userId,
+          },
+        });
 
       if (!project) {
         return NextResponse.json(
           {
             success: false,
-            error: "Project not found"
+            error: "Project not found",
           },
           {
-            status: 404
+            status: 404,
           }
         );
       }
@@ -91,27 +126,38 @@ export async function POST(request: Request) {
       data: {
         title: result.data.title,
         priority: result.data.priority,
-        dueDate: new Date(result.data.dueDate),
+        dueDate: new Date(
+          result.data.dueDate
+        ),
+
         estimatedHours: result.data.estimatedHours ?? null,
         status: "TODO",
-
-        userId: DEV_USER_ID,
-
-        projectId: result.data.projectId ?? null
-      }
+        userId,
+        projectId: result.data.projectId ?? null,
+      },
     });
+
+    if (newTask.projectId !== null) {
+      await syncProjectStatus(
+        newTask.projectId,
+        userId
+      );
+    }
 
     return NextResponse.json(
       {
         success: true,
-        data: newTask
+        data: newTask,
       },
       {
-        status: 201
+        status: 201,
       }
     );
   } catch (error) {
-    console.error("Failed to create task:", error);
+    console.error(
+      "Failed to create task:",
+      error
+    );
 
     return NextResponse.json(
       {
