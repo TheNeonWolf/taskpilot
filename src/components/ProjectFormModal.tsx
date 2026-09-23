@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { SyntheticEvent } from "react";
+import { AIPromptInput } from "@/components/AIPromptInput";
 
 import {
   Project,
@@ -43,31 +44,75 @@ export default function ProjectFormModal({
     project !== undefined;
 
   const [name, setName] = useState("");
-  const [description, setDescription] =
-    useState("");
+  const [description, setDescription] = useState("");
 
   // Used only when creating a new project.
-  const [tasks, setTasks] =
-    useState<NewProjectTask[]>([]);
+  const [tasks, setTasks] = useState<NewProjectTask[]>([]);
 
   // Used only when editing an existing project.
-  const [existingTasks, setExistingTasks] =
-    useState<Task[]>([]);
+  const [existingTasks, setExistingTasks] = useState<Task[]>([]);
 
   // Keeps track of the original task statuses
-  // so we only PATCH tasks that actually changed.
-  const [
-    originalTaskStatuses,
-    setOriginalTaskStatuses,
-  ] = useState<Record<number, TaskStatus>>({});
+  // so only PATCH tasks that actually changed.
+  const [originalTaskStatuses, setOriginalTaskStatuses] = useState<
+    Record<number, TaskStatus>
+  >({});
 
-  const [tasksLoading, setTasksLoading] =
-    useState(false);
-
-  const [submitting, setSubmitting] =
-    useState(false);
-
+  const [tasksLoading, setTasksLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // AI Handler to pre-fill project details and ML-predicted subtasks
+  const handleAIGenerated = async (aiData: {
+    name: string;
+    description: string;
+    tasks?: {
+      title: string;
+      priority?: TaskPriority;
+      dueDate: string;
+      estimatedHours?: number | null;
+    }[];
+  }) => {
+    if (aiData.name) setName(aiData.name);
+    if (aiData.description) setDescription(aiData.description);
+
+    if (aiData.tasks && Array.isArray(aiData.tasks)) {
+      const initialFormattedTasks = aiData.tasks.map((task) => ({
+        title: task.title || "",
+        dueDate: task.dueDate || "",
+        estimatedHours:
+          task.estimatedHours !== undefined && task.estimatedHours !== null
+            ? String(task.estimatedHours)
+            : "2",
+      }));
+
+      // Pass AI generated tasks to ML batch predictor
+      try {
+        const mlRes = await fetch("/api/ml/predict-batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tasks: initialFormattedTasks }),
+        });
+
+        const mlData = await mlRes.json();
+
+        if (mlData.success && Array.isArray(mlData.tasks)) {
+          setTasks(mlData.tasks);
+          return;
+        }
+      } catch (err) {
+        console.error("Failed to run ML priority prediction:", err);
+      }
+
+      // Fallback if ML prediction service is offline
+      setTasks(
+        initialFormattedTasks.map((t) => ({
+          ...t,
+          priority: "MEDIUM" as TaskPriority,
+        }))
+      );
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -91,10 +136,7 @@ export default function ProjectFormModal({
 
           const result = await response.json();
 
-          if (
-            !response.ok ||
-            !result.success
-          ) {
+          if (!response.ok || !result.success) {
             throw new Error(
               typeof result.error === "string"
                 ? result.error
@@ -102,15 +144,11 @@ export default function ProjectFormModal({
             );
           }
 
-          const fetchedTasks: Task[] =
-            result.data;
+          const fetchedTasks: Task[] = result.data;
 
           setExistingTasks(fetchedTasks);
 
-          const statuses: Record<
-            number,
-            TaskStatus
-          > = {};
+          const statuses: Record<number, TaskStatus> = {};
 
           fetchedTasks.forEach((task) => {
             statuses[task.id] = task.status;
@@ -165,26 +203,20 @@ export default function ProjectFormModal({
     value: string
   ) => {
     setTasks((currentTasks) =>
-      currentTasks.map(
-        (task, taskIndex) =>
-          taskIndex === index
-            ? {
-                ...task,
-                [field]: value,
-              }
-            : task
+      currentTasks.map((task, taskIndex) =>
+        taskIndex === index
+          ? {
+              ...task,
+              [field]: value,
+            }
+          : task
       )
     );
   };
 
-  const removeTask = (
-    index: number
-  ) => {
+  const removeTask = (index: number) => {
     setTasks((currentTasks) =>
-      currentTasks.filter(
-        (_, taskIndex) =>
-          taskIndex !== index
-      )
+      currentTasks.filter((_, taskIndex) => taskIndex !== index)
     );
   };
 
@@ -223,18 +255,13 @@ export default function ProjectFormModal({
     onClose();
   };
 
-  const completedTaskCount =
-    existingTasks.filter(
-      (task) => task.status === "DONE"
-    ).length;
+  const completedTaskCount = existingTasks.filter(
+    (task) => task.status === "DONE"
+  ).length;
 
-  const calculatedStatus:
-    | "ACTIVE"
-    | "COMPLETED" =
+  const calculatedStatus: "ACTIVE" | "COMPLETED" =
     existingTasks.length > 0 &&
-    existingTasks.every(
-      (task) => task.status === "DONE"
-    )
+    existingTasks.every((task) => task.status === "DONE")
       ? "COMPLETED"
       : "ACTIVE";
 
@@ -246,61 +273,39 @@ export default function ProjectFormModal({
     setError("");
 
     if (!name.trim()) {
-      setError(
-        "Please enter a project name."
-      );
+      setError("Please enter a project name.");
       return;
     }
 
     if (!description.trim()) {
-      setError(
-        "Please enter a project description."
-      );
+      setError("Please enter a project description.");
       return;
     }
 
     if (description.length > 200) {
-      setError(
-        "Description cannot exceed 200 characters."
-      );
+      setError("Description cannot exceed 200 characters.");
       return;
     }
 
-    // Validate initial tasks only
-    // when creating a project.
+    // Validate initial tasks only when creating a project
     if (!isEditing) {
-      for (
-        let index = 0;
-        index < tasks.length;
-        index++
-      ) {
+      for (let index = 0; index < tasks.length; index++) {
         const task = tasks[index];
 
         if (!task.title.trim()) {
-          setError(
-            `Please enter a title for Task ${index + 1}.`
-          );
+          setError(`Please enter a title for Task ${index + 1}.`);
           return;
         }
 
         if (!task.dueDate) {
-          setError(
-            `Please select a due date for Task ${index + 1}.`
-          );
+          setError(`Please select a due date for Task ${index + 1}.`);
           return;
         }
 
-        if (
-          task.estimatedHours !== ""
-        ) {
-          const hours = Number(
-            task.estimatedHours
-          );
+        if (task.estimatedHours !== "") {
+          const hours = Number(task.estimatedHours);
 
-          if (
-            !Number.isFinite(hours) ||
-            hours < 0.5
-          ) {
+          if (!Number.isFinite(hours) || hours < 0.5) {
             setError(
               `Estimated hours for Task ${index + 1} must be at least 0.5.`
             );
@@ -314,49 +319,25 @@ export default function ProjectFormModal({
 
     try {
       if (isEditing && project) {
-        /*
-         * 1. Update task statuses first.
-         *
-         * We do these sequentially rather than with
-         * Promise.all because each task PATCH can
-         * recalculate the project's automatic status.
-         */
         for (const task of existingTasks) {
-          const originalStatus =
-            originalTaskStatuses[
-              task.id
-            ];
+          const originalStatus = originalTaskStatuses[task.id];
 
-          if (
-            originalStatus !== task.status
-          ) {
-            const taskResponse =
-              await fetch(
-                `/api/tasks/${task.id}`,
-                {
-                  method: "PATCH",
+          if (originalStatus !== task.status) {
+            const taskResponse = await fetch(`/api/tasks/${task.id}`, {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                status: task.status,
+              }),
+            });
 
-                  headers: {
-                    "Content-Type":
-                      "application/json",
-                  },
+            const taskResult = await taskResponse.json();
 
-                  body: JSON.stringify({
-                    status: task.status,
-                  }),
-                }
-              );
-
-            const taskResult =
-              await taskResponse.json();
-
-            if (
-              !taskResponse.ok ||
-              !taskResult.success
-            ) {
+            if (!taskResponse.ok || !taskResult.success) {
               throw new Error(
-                typeof taskResult.error ===
-                  "string"
+                typeof taskResult.error === "string"
                   ? taskResult.error
                   : `Failed to update task "${task.title}"`
               );
@@ -364,69 +345,36 @@ export default function ProjectFormModal({
           }
         }
 
-        /*
-         * 2. Update only the editable
-         * project fields.
-         *
-         * Status is NOT sent because it is
-         * controlled automatically by tasks.
-         */
-        const projectResponse =
-          await fetch(
-            `/api/projects/${project.id}`,
-            {
-              method: "PATCH",
+        const projectResponse = await fetch(`/api/projects/${project.id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: name.trim(),
+            description: description.trim(),
+          }),
+        });
 
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
+        const projectResult = await projectResponse.json();
 
-              body: JSON.stringify({
-                name: name.trim(),
-                description:
-                  description.trim(),
-              }),
-            }
-          );
-
-        const projectResult =
-          await projectResponse.json();
-
-        if (
-          !projectResponse.ok ||
-          !projectResult.success
-        ) {
+        if (!projectResponse.ok || !projectResult.success) {
           throw new Error(
-            typeof projectResult.error ===
-              "string"
+            typeof projectResult.error === "string"
               ? projectResult.error
               : "Failed to update project"
           );
         }
 
-        /*
-         * 3. Fetch the project again.
-         *
-         * This gives us the final automatic
-         * status and progress after all task
-         * status changes.
-         */
-        const refreshedResponse =
-          await fetch(
-            `/api/projects/${project.id}`
-          );
+        const refreshedResponse = await fetch(
+          `/api/projects/${project.id}`
+        );
 
-        const refreshedResult =
-          await refreshedResponse.json();
+        const refreshedResult = await refreshedResponse.json();
 
-        if (
-          !refreshedResponse.ok ||
-          !refreshedResult.success
-        ) {
+        if (!refreshedResponse.ok || !refreshedResult.success) {
           throw new Error(
-            typeof refreshedResult.error ===
-              "string"
+            typeof refreshedResult.error === "string"
               ? refreshedResult.error
               : "Failed to refresh project"
           );
@@ -434,68 +382,53 @@ export default function ProjectFormModal({
 
         onSaved(refreshedResult.data);
       } else {
-        /*
-         * New project.
-         *
-         * Projects always begin ACTIVE.
-         * Their status is controlled automatically
-         * after creation.
-         */
-        const response = await fetch(
-          "/api/projects",
-          {
-            method: "POST",
+        const response = await fetch("/api/projects", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: name.trim(),
+            description: description.trim(),
+            status: "ACTIVE",
+            tasks: tasks.map((task) => ({
+              title: task.title.trim(),
+              priority: task.priority,
+              dueDate: task.dueDate,
+              estimatedHours:
+                task.estimatedHours === ""
+                  ? undefined
+                  : Number(task.estimatedHours),
+            })),
+          }),
+        });
 
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
+        const result = await response.json();
 
-            body: JSON.stringify({
-              name: name.trim(),
-
-              description:
-                description.trim(),
-              
-
-              tasks: tasks.map(
-                (task) => ({
-                  title:
-                    task.title.trim(),
-
-                  priority:
-                    task.priority,
-
-                  dueDate:
-                    task.dueDate,
-
-                  estimatedHours:
-                    task.estimatedHours ===
-                    ""
-                      ? undefined
-                      : Number(
-                          task.estimatedHours
-                        ),
-                })
-              ),
-            }),
-          }
-        );
-
-        const result =
-          await response.json();
-
-        if (
-          !response.ok ||
-          !result.success
-        ) {
+        if (!response.ok || !result.success) {
           throw new Error(
-            typeof result.error ===
-              "string"
+            typeof result.error === "string"
               ? result.error
               : "Failed to create project"
           );
         }
+
+        // Send feedback for each task to retrain the ML model with user choices
+        tasks.forEach((task) => {
+          if (task.dueDate) {
+            fetch("/api/ml/feedback", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                dueDate: task.dueDate,
+                estimatedHours: task.estimatedHours,
+                actualPriority: task.priority,
+              }),
+            }).catch((err) =>
+              console.error("Failed to send ML feedback:", err)
+            );
+          }
+        });
 
         onSaved(result.data);
       }
@@ -503,10 +436,7 @@ export default function ProjectFormModal({
       resetForm();
       onClose();
     } catch (error) {
-      console.error(
-        "Failed to save project:",
-        error
-      );
+      console.error("Failed to save project:", error);
 
       setError(
         error instanceof Error
@@ -526,26 +456,28 @@ export default function ProjectFormModal({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onMouseDown={(event) => {
-        if (
-          event.target ===
-          event.currentTarget
-        ) {
+        if (event.target === event.currentTarget) {
           handleClose();
         }
       }}
     >
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-          {isEditing
-            ? "Update Project"
-            : "Add Project"}
+          {isEditing ? "Update Project" : "Add Project"}
         </h2>
 
-        <form
-          onSubmit={handleSubmit}
-          noValidate
-          className="mt-6 space-y-5"
-        >
+        {/* AI Generator Bar - Rendered when creating a new project */}
+        {!isEditing && (
+          <div className="mt-4">
+            <AIPromptInput
+              type="project"
+              onGenerated={handleAIGenerated}
+              placeholder="e.g., Redesign landing page with hero section, features, and pricing table"
+            />
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-5">
           {/* Name */}
           <div>
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -555,12 +487,8 @@ export default function ProjectFormModal({
             <input
               type="text"
               value={name}
-              onChange={(event) =>
-                setName(
-                  event.target.value
-                )
-              }
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800"
+              onChange={(event) => setName(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
             />
           </div>
 
@@ -572,14 +500,10 @@ export default function ProjectFormModal({
 
             <textarea
               value={description}
-              onChange={(event) =>
-                setDescription(
-                  event.target.value
-                )
-              }
+              onChange={(event) => setDescription(event.target.value)}
               maxLength={200}
               rows={3}
-              className="mt-1 w-full resize-none rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800"
+              className="mt-1 w-full resize-none rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
             />
 
             <p className="mt-1 text-right text-xs text-gray-500 dark:text-gray-400">
@@ -596,8 +520,7 @@ export default function ProjectFormModal({
 
               <div className="mt-1 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
                 <div className="flex items-center gap-2">
-                  {calculatedStatus ===
-                  "COMPLETED" ? (
+                  {calculatedStatus === "COMPLETED" ? (
                     <CheckCircle2
                       size={18}
                       className="text-green-600 dark:text-green-400"
@@ -610,16 +533,14 @@ export default function ProjectFormModal({
                   )}
 
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {calculatedStatus ===
-                    "COMPLETED"
+                    {calculatedStatus === "COMPLETED"
                       ? "Completed"
                       : "Active"}
                   </span>
                 </div>
 
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Project status is updated
-                  automatically based on task
+                  Project status is updated automatically based on task
                   completion.
                 </p>
               </div>
@@ -637,133 +558,98 @@ export default function ProjectFormModal({
 
                   {!tasksLoading && (
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      {completedTaskCount} of{" "}
-                      {existingTasks.length}{" "}
-                      tasks completed
+                      {completedTaskCount} of {existingTasks.length} tasks
+                      completed
                     </p>
                   )}
                 </div>
 
-                {!tasksLoading &&
-                  existingTasks.length >
-                    0 && (
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                      {Math.round(
-                        (completedTaskCount /
-                          existingTasks.length) *
-                          100
-                      )}
-                      %
-                    </span>
-                  )}
+                {!tasksLoading && existingTasks.length > 0 && (
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                    {Math.round(
+                      (completedTaskCount / existingTasks.length) * 100
+                    )}
+                    %
+                  </span>
+                )}
               </div>
 
               {tasksLoading ? (
                 <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
                   Loading tasks...
                 </p>
-              ) : existingTasks.length ===
-                0 ? (
+              ) : existingTasks.length === 0 ? (
                 <div className="mt-4 rounded-lg border border-dashed border-gray-300 p-5 text-center dark:border-gray-700">
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    No tasks in this
-                    project yet
+                    No tasks in this project yet
                   </p>
 
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Add a task from the
-                    Tasks page and assign
-                    it to this project.
+                    Add a task from the Tasks page and assign it to this
+                    project.
                   </p>
                 </div>
               ) : (
                 <div className="mt-4 space-y-3">
-                  {existingTasks.map(
-                    (task) => (
-                      <div
-                        key={task.id}
-                        className="rounded-lg border border-gray-200 p-4 dark:border-gray-700"
-                      >
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              {task.status ===
-                              "DONE" ? (
-                                <CheckCircle2
-                                  size={17}
-                                  className="shrink-0 text-green-600 dark:text-green-400"
-                                />
-                              ) : task.status ===
-                                "IN_PROGRESS" ? (
-                                <Clock3
-                                  size={17}
-                                  className="shrink-0 text-blue-600 dark:text-blue-400"
-                                />
-                              ) : (
-                                <Circle
-                                  size={17}
-                                  className="shrink-0 text-gray-400"
-                                />
-                              )}
+                  {existingTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="rounded-lg border border-gray-200 p-4 dark:border-gray-700"
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            {task.status === "DONE" ? (
+                              <CheckCircle2
+                                size={17}
+                                className="shrink-0 text-green-600 dark:text-green-400"
+                              />
+                            ) : task.status === "IN_PROGRESS" ? (
+                              <Clock3
+                                size={17}
+                                className="shrink-0 text-blue-600 dark:text-blue-400"
+                              />
+                            ) : (
+                              <Circle
+                                size={17}
+                                className="shrink-0 text-gray-400"
+                              />
+                            )}
 
-                              <p className="truncate font-medium text-gray-900 dark:text-white">
-                                {task.title}
-                              </p>
-                            </div>
-
-                            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-                              <span>
-                                Priority:{" "}
-                                {task.priority}
-                              </span>
-
-                              {task.estimatedHours !==
-                                null && (
-                                <span>
-                                  {
-                                    task.estimatedHours
-                                  }{" "}
-                                  hr
-                                  {task.estimatedHours !==
-                                  1
-                                    ? "s"
-                                    : ""}
-                                </span>
-                              )}
-                            </div>
+                            <p className="truncate font-medium text-gray-900 dark:text-white">
+                              {task.title}
+                            </p>
                           </div>
 
-                          <select
-                            value={
-                              task.status
-                            }
-                            onChange={(
-                              event
-                            ) =>
-                              updateExistingTaskStatus(
-                                task.id,
-                                event.target
-                                  .value as TaskStatus
-                              )
-                            }
-                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white sm:w-40"
-                          >
-                            <option value="TODO">
-                              Todo
-                            </option>
+                          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                            <span>Priority: {task.priority}</span>
 
-                            <option value="IN_PROGRESS">
-                              In Progress
-                            </option>
-
-                            <option value="DONE">
-                              Done
-                            </option>
-                          </select>
+                            {task.estimatedHours !== null && (
+                              <span>
+                                {task.estimatedHours} hr
+                                {task.estimatedHours !== 1 ? "s" : ""}
+                              </span>
+                            )}
+                          </div>
                         </div>
+
+                        <select
+                          value={task.status}
+                          onChange={(event) =>
+                            updateExistingTaskStatus(
+                              task.id,
+                              event.target.value as TaskStatus
+                            )
+                          }
+                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white sm:w-40"
+                        >
+                          <option value="TODO">Todo</option>
+                          <option value="IN_PROGRESS">In Progress</option>
+                          <option value="DONE">Done</option>
+                        </select>
                       </div>
-                    )
-                  )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -779,15 +665,14 @@ export default function ProjectFormModal({
                   </h3>
 
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Optional tasks to create
-                    with this project.
+                    Optional tasks to create with this project.
                   </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={addTask}
-                  className="flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium transition hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                  className="flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium transition hover:bg-gray-50 dark:border-gray-700 dark:text-white dark:hover:bg-gray-800"
                 >
                   <Plus size={16} />
                   Add Task
@@ -795,158 +680,104 @@ export default function ProjectFormModal({
               </div>
 
               <div className="mt-4 space-y-4">
-                {tasks.map(
-                  (task, index) => (
-                    <div
-                      key={index}
-                      className="rounded-xl border border-gray-200 p-4 dark:border-gray-700"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Task {index + 1}
-                        </span>
+                {tasks.map((task, index) => (
+                  <div
+                    key={index}
+                    className="rounded-xl border border-gray-200 p-4 dark:border-gray-700"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Task {index + 1}
+                      </span>
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            removeTask(
-                              index
+                      <button
+                        type="button"
+                        onClick={() => removeTask(index)}
+                        title="Remove task"
+                        aria-label={`Remove Task ${index + 1}`}
+                        className="cursor-pointer rounded-lg p-2 text-red-500 transition hover:bg-red-50 dark:hover:bg-red-950"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      {/* Task title */}
+                      <div className="sm:col-span-2">
+                        <label className="text-sm text-gray-600 dark:text-gray-400">
+                          Title
+                        </label>
+
+                        <input
+                          type="text"
+                          value={task.title}
+                          onChange={(event) =>
+                            updateTask(index, "title", event.target.value)
+                          }
+                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                        />
+                      </div>
+
+                      {/* Priority */}
+                      <div>
+                        <label className="text-sm text-gray-600 dark:text-gray-400">
+                          Priority
+                        </label>
+
+                        <select
+                          value={task.priority}
+                          onChange={(event) =>
+                            updateTask(index, "priority", event.target.value)
+                          }
+                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                        >
+                          <option value="LOW">Low</option>
+                          <option value="MEDIUM">Medium</option>
+                          <option value="HIGH">High</option>
+                        </select>
+                      </div>
+
+                      {/* Due date */}
+                      <div>
+                        <label className="text-sm text-gray-600 dark:text-gray-400">
+                          Due Date
+                        </label>
+
+                        <input
+                          type="date"
+                          value={task.dueDate}
+                          onChange={(event) =>
+                            updateTask(index, "dueDate", event.target.value)
+                          }
+                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                        />
+                      </div>
+
+                      {/* Estimated hours */}
+                      <div>
+                        <label className="text-sm text-gray-600 dark:text-gray-400">
+                          Estimated Hours
+                        </label>
+
+                        <input
+                          type="number"
+                          min="0.5"
+                          step="0.5"
+                          value={task.estimatedHours}
+                          onChange={(event) =>
+                            updateTask(
+                              index,
+                              "estimatedHours",
+                              event.target.value
                             )
                           }
-                          title="Remove task"
-                          aria-label={`Remove Task ${
-                            index + 1
-                          }`}
-                          className="cursor-pointer rounded-lg p-2 text-red-500 transition hover:bg-red-50 dark:hover:bg-red-950"
-                        >
-                          <Trash2
-                            size={16}
-                          />
-                        </button>
-                      </div>
-
-                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                        {/* Task title */}
-                        <div className="sm:col-span-2">
-                          <label className="text-sm text-gray-600 dark:text-gray-400">
-                            Title
-                          </label>
-
-                          <input
-                            type="text"
-                            value={
-                              task.title
-                            }
-                            onChange={(
-                              event
-                            ) =>
-                              updateTask(
-                                index,
-                                "title",
-                                event
-                                  .target
-                                  .value
-                              )
-                            }
-                            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800"
-                          />
-                        </div>
-
-                        {/* Priority */}
-                        <div>
-                          <label className="text-sm text-gray-600 dark:text-gray-400">
-                            Priority
-                          </label>
-
-                          <select
-                            value={
-                              task.priority
-                            }
-                            onChange={(
-                              event
-                            ) =>
-                              updateTask(
-                                index,
-                                "priority",
-                                event
-                                  .target
-                                  .value
-                              )
-                            }
-                            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800"
-                          >
-                            <option value="LOW">
-                              Low
-                            </option>
-
-                            <option value="MEDIUM">
-                              Medium
-                            </option>
-
-                            <option value="HIGH">
-                              High
-                            </option>
-                          </select>
-                        </div>
-
-                        {/* Due date */}
-                        <div>
-                          <label className="text-sm text-gray-600 dark:text-gray-400">
-                            Due Date
-                          </label>
-
-                          <input
-                            type="date"
-                            value={
-                              task.dueDate
-                            }
-                            onChange={(
-                              event
-                            ) =>
-                              updateTask(
-                                index,
-                                "dueDate",
-                                event
-                                  .target
-                                  .value
-                              )
-                            }
-                            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800"
-                          />
-                        </div>
-
-                        {/* Estimated hours */}
-                        <div>
-                          <label className="text-sm text-gray-600 dark:text-gray-400">
-                            Estimated Hours
-                          </label>
-
-                          <input
-                            type="number"
-                            min="0.5"
-                            step="0.5"
-                            value={
-                              task.estimatedHours
-                            }
-                            onChange={(
-                              event
-                            ) =>
-                              updateTask(
-                                index,
-                                "estimatedHours",
-                                event
-                                  .target
-                                  .value
-                              )
-                            }
-                            placeholder="Optional"
-                            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800"
-                          />
-                        </div>
+                          placeholder="Optional"
+                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                        />
                       </div>
                     </div>
-                  )
-                )}
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -971,10 +802,7 @@ export default function ProjectFormModal({
 
               <button
                 type="submit"
-                disabled={
-                  submitting ||
-                  tasksLoading
-                }
+                disabled={submitting || tasksLoading}
                 className="cursor-pointer rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
               >
                 {submitting

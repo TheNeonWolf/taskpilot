@@ -134,3 +134,24 @@ export const loginSchema = z.object({
     .string()
     .min(1, "Password is required"),
 });
+
+export const aiGenerateInputSchema = z.object({
+  prompt: z
+    .string()
+    .trim()
+    .min(3, "Prompt must be at least 3 characters"),
+  type: z.enum(["task", "project"]),
+});
+
+export const generatedTaskSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
+  dueDate: dueDateSchema,
+  estimatedHours: estimatedHoursSchema.optional().nullable(),
+});
+
+export const generatedProjectSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  description: z.string().min(1, "Description is required"),
+  tasks: z.array(generatedTaskSchema).default([]),
+});

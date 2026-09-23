@@ -1,6 +1,7 @@
 "use client";
 
 import { Project } from "@/types";
+import { AISummaryBadge } from "@/components/AISummaryBadge";
 import {
   Pencil,
   Trash2,
@@ -88,6 +89,9 @@ export default function ProjectCard({
       <p className="mt-3 line-clamp-2 break-words text-sm text-gray-600 dark:text-gray-400">
         {project.description}
       </p>
+
+      {/* AI Summary Badge */}
+      <AISummaryBadge projectId={project.id} />
 
       {/* Progress */}
       <div className="mt-5">

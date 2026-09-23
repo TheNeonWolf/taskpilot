@@ -50,7 +50,7 @@ export default function TaskStatusChart({
 
   if (tasks.length === 0) {
     return (
-      <div className="rounded-xl border border-gray-200 dark:border-grey-800 bg-white dark:bg-gray-900  p-6 shadow-sm">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             Tasks by Status

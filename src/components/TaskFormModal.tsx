@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { SyntheticEvent } from "react";
+import { AIPromptInput } from "@/components/AIPromptInput";
 
 import {
   Project,
@@ -27,8 +28,7 @@ export default function TaskFormModal({
 
   const [title, setTitle] = useState("");
   const [status, setStatus] = useState<TaskStatus>("TODO");
-  const [priority, setPriority] =
-    useState<TaskPriority>("MEDIUM");
+  const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
 
   const [dueDate, setDueDate] = useState("");
   const [estimatedHours, setEstimatedHours] = useState("");
@@ -38,6 +38,46 @@ export default function TaskFormModal({
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // AI Handler with ML Priority Predictor integration
+  const handleAIGenerated = async (aiData: {
+    title: string;
+    priority?: "LOW" | "MEDIUM" | "HIGH";
+    dueDate: string;
+    estimatedHours?: number;
+  }) => {
+    if (aiData.title) setTitle(aiData.title);
+    if (aiData.dueDate) setDueDate(aiData.dueDate);
+    if (aiData.estimatedHours !== undefined && aiData.estimatedHours !== null) {
+      setEstimatedHours(String(aiData.estimatedHours));
+    }
+
+    // Default to Gemini priority if available
+    let chosenPriority: TaskPriority = (aiData.priority as TaskPriority) || "MEDIUM";
+
+    // Query ML Priority Predictor microservice
+    if (aiData.dueDate) {
+      try {
+        const mlRes = await fetch("/api/ml/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            dueDate: aiData.dueDate,
+            estimatedHours: aiData.estimatedHours || 1,
+          }),
+        });
+
+        const mlData = await mlRes.json();
+        if (mlData.success && mlData.suggestedPriority) {
+          chosenPriority = mlData.suggestedPriority as TaskPriority;
+        }
+      } catch (err) {
+        console.error("ML service prediction failed, using fallback:", err);
+      }
+    }
+
+    setPriority(chosenPriority);
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -188,6 +228,21 @@ export default function TaskFormModal({
         );
       }
 
+      // Send feedback to retrain ML decision tree model with final user choice
+      if (dueDate) {
+        fetch("/api/ml/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            dueDate,
+            estimatedHours,
+            actualPriority: priority,
+          }),
+        }).catch((err) =>
+          console.error("Failed to send ML feedback:", err)
+        );
+      }
+
       onSaved(result.data);
       onClose();
     } catch (error) {
@@ -204,16 +259,33 @@ export default function TaskFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div onClick={(event) => event.stopPropagation()} className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        onClick={(event) => event.stopPropagation()}
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900"
+      >
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
           {isEditing ? "Update Task" : "Add Task"}
         </h2>
 
+        {/* AI Prompt Bar - only show when creating a new task */}
+        {!isEditing && (
+          <div className="mt-4">
+            <AIPromptInput
+              type="task"
+              onGenerated={handleAIGenerated}
+              placeholder="e.g., Finish CS2030S assignment by Friday, 4 hours"
+            />
+          </div>
+        )}
+
         <form
           onSubmit={handleSubmit}
           noValidate
-          className="mt-6 space-y-4"
+          className="mt-4 space-y-4"
         >
           {/* Title */}
           <div>
@@ -247,17 +319,9 @@ export default function TaskFormModal({
                 }
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800"
               >
-                <option value="TODO">
-                  To Do
-                </option>
-
-                <option value="IN_PROGRESS">
-                  In Progress
-                </option>
-
-                <option value="DONE">
-                  Done
-                </option>
+                <option value="TODO">To Do</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="DONE">Done</option>
               </select>
             </div>
           )}
@@ -277,17 +341,9 @@ export default function TaskFormModal({
               }
               className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800"
             >
-              <option value="LOW">
-                Low
-              </option>
-
-              <option value="MEDIUM">
-                Medium
-              </option>
-
-              <option value="HIGH">
-                High
-              </option>
+              <option value="LOW">Low</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HIGH">High</option>
             </select>
           </div>
 
@@ -341,9 +397,7 @@ export default function TaskFormModal({
               }
               className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-gray-500 dark:border-gray-700 dark:bg-gray-800"
             >
-              <option value="">
-                No project
-              </option>
+              <option value="">No project</option>
 
               {projects.map((project) => (
                 <option
