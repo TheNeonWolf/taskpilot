@@ -35,25 +35,28 @@ export async function POST(request: Request) {
       },
     });
 
-    const mlResponse = await fetch("http://127.0.0.1:8000/predict", {
+    // Resolve ML service base URL (Fallback to local dev if environment variable is unset)
+    const baseUrl = (process.env.ML_SERVICE_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+
+    const mlResponse = await fetch(`${baseUrl}/predict`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        daysUntilDue,
-        estimatedHours: Number(estimatedHours) || 1,
-        activeTaskCount,
+        days_until_due: daysUntilDue,
+        estimated_hours: Number(estimatedHours) || 1,
+        active_task_count: activeTaskCount,
       }),
     });
 
     if (!mlResponse.ok) {
-      throw new Error("ML service returned an error");
+      throw new Error(`ML service returned status ${mlResponse.status}`);
     }
 
     const mlData = await mlResponse.json();
 
     return NextResponse.json({
       success: true,
-      suggestedPriority: mlData.suggestedPriority,
+      suggestedPriority: mlData.suggestedPriority || mlData.suggested_priority || "MEDIUM",
       features: {
         daysUntilDue,
         estimatedHours: Number(estimatedHours) || 1,

@@ -169,7 +169,7 @@ export default function ProjectFormModal({
 
           setExistingTasks([]);
           setOriginalTaskStatuses({});
-        } finally {
+        } fontally {
           setTasksLoading(false);
         }
       };
@@ -420,9 +420,9 @@ export default function ProjectFormModal({
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                dueDate: task.dueDate,
-                estimatedHours: task.estimatedHours,
-                actualPriority: task.priority,
+                due_date: task.dueDate,
+                estimated_hours: task.estimatedHours ? Number(task.estimatedHours) : 1,
+                actual_priority: task.priority,
               }),
             }).catch((err) =>
               console.error("Failed to send ML feedback:", err)
