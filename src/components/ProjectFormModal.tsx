@@ -169,7 +169,7 @@ export default function ProjectFormModal({
 
           setExistingTasks([]);
           setOriginalTaskStatuses({});
-        } fontally {
+        } finally {
           setTasksLoading(false);
         }
       };
