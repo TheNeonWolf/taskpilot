@@ -1,0 +1,21 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ML_SERVICE_URL=http://ml:8000
+    depends_on:
+      - ml
+
+  ml:
+    build:
+      context: ./ml          # Points to the ml subfolder
+      dockerfile: Dockerfile.ml # Finds Dockerfile.ml inside ./ml
+    ports:
+      - "8000:8000"
