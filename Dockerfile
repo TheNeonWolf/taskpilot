@@ -9,6 +9,7 @@ RUN npm ci
 # 3. Copy source and build
 COPY . .
 RUN npx prisma generate
+ENV DOCKER_BUILD=true
 RUN npm run build
 
 # 4. Production Runner
