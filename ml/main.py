@@ -36,9 +36,15 @@ class FeedbackPayload(BaseModel):
     activeTaskCount: int = Field(..., ge=0)
     actualPriority: str = Field(..., description="LOW, MEDIUM, or HIGH")
 
+@app.get("/health")
 @app.get("/")
 def health_check():
-    return {"status": "ok"}
+    return {
+        "status": "healthy",
+        "service": "taskpilot-ml",
+        "model_loaded": model is not None,
+        "data_file_exists": os.path.exists(DATA_PATH)
+    }
 
 @app.post("/predict")
 def predict_priority(features: TaskFeatures):
