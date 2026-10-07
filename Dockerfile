@@ -1,21 +1,20 @@
-# 1. Base Image
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# 2. Install dependencies
 COPY package*.json ./
 RUN npm ci
 
-# 3. Copy source and build
 COPY . .
 RUN npx prisma generate
+
+# Build-time environment variables for Next.js static page collection
 ENV DOCKER_BUILD=true
-ENV JWT_SECRET="ci-dummy-secret-key-for-build-12345"
+ENV JWT_SECRET="ci-dummy-secret-key-12345"
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/db"
 ENV GEMINI_API_KEY="ci-dummy-key"
+
 RUN npm run build
 
-# 4. Production Runner
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
