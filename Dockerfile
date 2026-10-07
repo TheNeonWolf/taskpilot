@@ -10,7 +10,7 @@ RUN npm ci
 COPY . .
 RUN npx prisma generate
 ENV DOCKER_BUILD=true
-ENV JWT_SECRET="ci-dummy-secret"
+ENV JWT_SECRET="ci-dummy-secret-key-for-build-12345"
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/db"
 ENV GEMINI_API_KEY="ci-dummy-key"
 RUN npm run build

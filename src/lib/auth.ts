@@ -1,14 +1,13 @@
 import { SignJWT, jwtVerify } from "jose";
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || "build-time-fallback-secret";
 
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET is not defined");
+export function getJwtSecretKey() {
+  if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production" && !process.env.DOCKER_BUILD) {
+    throw new Error("JWT_SECRET is not defined in production environment");
+  }
+  return new TextEncoder().encode(JWT_SECRET);
 }
-
-const secret = new TextEncoder().encode(
-  JWT_SECRET
-);
 
 export type AuthTokenPayload = {
   userId: number;
