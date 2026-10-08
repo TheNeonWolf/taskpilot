@@ -28,8 +28,8 @@ jobs:
       - name: Typecheck and Build Next.js
         run: npm run build
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          JWT_SECRET: "ci-dummy-secret"
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/db"
+          JWT_SECRET: "ci-dummy-secret-key-12345"
           GEMINI_API_KEY: "ci-dummy-key"
 
       - name: Set up Docker Buildx
