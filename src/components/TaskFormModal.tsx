@@ -234,9 +234,9 @@ export default function TaskFormModal({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            due_date: dueDate,
-            estimated_hours: estimatedHours ? Number(estimatedHours) : 1,
-            actual_priority: priority,
+            dueDate: dueDate,
+            estimatedHours: estimatedHours ? Number(estimatedHours) : 1,
+            actualPriority: priority,
           }),
         }).catch((err) =>
           console.error("Failed to send ML feedback:", err)

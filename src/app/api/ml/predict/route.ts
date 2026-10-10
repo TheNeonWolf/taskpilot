@@ -42,9 +42,9 @@ export async function POST(request: Request) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        days_until_due: daysUntilDue,
-        estimated_hours: Number(estimatedHours) || 1,
-        active_task_count: activeTaskCount,
+        daysUntilDue: daysUntilDue,
+        estimatedHours: Number(estimatedHours) || 1,
+        activeTaskCount: activeTaskCount,
       }),
     });
 
